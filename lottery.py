@@ -684,7 +684,7 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                             continue
                 continue
             try:
-                bot2.start()  
+                  
                 usser = bot2.get_chat(user)
                 usser_id = usser.id
                 usser_name = usser.username
@@ -704,7 +704,7 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                                     '$set': {'first_name': usser_name}}, upsert=True)
                 roles.update_one({'chat_id':chat_id,'role_name':role_name},
                                 {'$inc':{'count':1}},upsert=True)
-                bot2.stop()
+                
             except Exception:
                 bot.send_message(message.chat.id,"unexpected error happens")
                 pass
@@ -796,7 +796,7 @@ def remove_user_to_role(message, role_name, chat_id, msg2):
                             continue
                 continue
             try:
-                bot2.start()
+                
                 user_obj = bot2.get_chat(user)
                 user_id = user_obj.id
                 user_name = user_obj.username
@@ -812,7 +812,7 @@ def remove_user_to_role(message, role_name, chat_id, msg2):
                 roles.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$pull': {'roles': role_name}})
                 roles.update_one({'chat_id':chat_id,'role_name':role_name},
                                 {'$inc':{'count':-1}},upsert=True)
-                bot2.stop()
+                
             except Exception:
                 bot.send_message(message.chat.id,"Unexpected Error Happen")
                 pass
@@ -942,14 +942,14 @@ def role_giver(chat_id , user_id):
                 if data:
                     return
                 try:
-                    bot2.start()
+                    
                     usser = bot2.get_users(user_id)
                     usser_name = usser.username
                     roles.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$addToSet': {'roles': role_name},'$set': {'first_name': usser_name}}, upsert=True)
                     roles.update_one({'chat_id':chat_id,'role_name':role_name},
                              {'$inc':{'count':1}},upsert=True)
                     is_give_role = False
-                    bot2.stop()
+                    
                 except Exception:
                     pass
 
@@ -1101,6 +1101,6 @@ def count_messages(message):
                           upsert=True)
 bot2.start()
 bot2.send_message("@bnsl_boy","test_send")
-bot2.stop()
+
 
 bot.infinity_polling()
