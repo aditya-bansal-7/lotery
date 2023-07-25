@@ -700,6 +700,8 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                                 {'$inc':{'count':1}},upsert=True)
                 bot2.stop()
             except Exception as e:
+                if e == "Client is already connected":
+                    bot2.stop()
                 bot.send_message(message.chat.id,f"unexpected error happens \n{e}")
                 pass
         message_test += f"\n已在此聊天中被赋予 {role_name} 角色"
