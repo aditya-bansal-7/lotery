@@ -7,14 +7,14 @@ from telebot.types import InlineKeyboardButton,InlineKeyboardMarkup,ReplyKeyboar
 import threading
 from pyrogram import Client 
 import random
-
+import asyncio
 bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
-API_ID = '1149607'
+API_ID = '13537456'
 
-API_HASH = 'd11f615e85605ecc85329c94cf2403b5'
+API_HASH = '3f6b781f6a730e8f76e7cb1f863727c5'
 
-bot2 = Client("my_teszxxt", api_id=API_ID, api_hash=API_HASH,bot_token="6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
+bot2 = Client("my_eszsvxxt", api_id=API_ID, api_hash=API_HASH,bot_token="6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
 password = 'VeJ7EH5TK13U4IQg'
 cluster_url = 'mongodb+srv://bnslboy:' + \
@@ -41,10 +41,6 @@ messages = db['messages']
 app = "not_set"
 
 
-def alive_check():
-  while True:
-    bot.send_message(1443989714,"i am alive")
-    time.sleep(300)
 
 def add_inline_markup(chat_id):
     markup = types.InlineKeyboardMarkup()
@@ -684,11 +680,10 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                             continue
                 continue
             try:
-                  
+                bot2.start()
                 usser = bot2.get_chat(user)
                 usser_id = usser.id
                 usser_name = usser.username
-
                 find = roles.find_one(
                     {'chat_id': chat_id, 'user_id': usser_id, 'roles': role_name})
                 if find:
@@ -697,17 +692,15 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                     bot.send_message(
                         message.from_user.id, f"{usser_name} 已具有 {role_name} 角色", reply_to_message_id=message.id,reply_markup=markup)
                     continue
-
                 message_test += f" • {usser_name}\n"
                 roles.update_one({'chat_id': chat_id, 'user_id': usser_id},
                                     {'$addToSet': {'roles': role_name},
                                     '$set': {'first_name': usser_name}}, upsert=True)
                 roles.update_one({'chat_id':chat_id,'role_name':role_name},
                                 {'$inc':{'count':1}},upsert=True)
-                
+                bot2.stop()
             except Exception as e:
-                bot2.send_message("@bnsl_boy",f"{e}")
-                bot.send_message(message.chat.id,"unexpected error happens",reply_markup=markup)
+                bot.send_message(message.chat.id,f"unexpected error happens \n{e}")
                 pass
         message_test += f"\n已在此聊天中被赋予 {role_name} 角色"
         if "•" in message_test:
@@ -716,7 +709,6 @@ def add_user_to_role(message,role_name,chat_id,msg2):
     except Exception:
         bot.delete_message(msg2.chat.id,msg2.id)
         bot.send_message(message.chat.id,"Got an error forward message is in beta please try again after some time",reply_markup=markup)
-
 
 def remove_user_to_role(message, role_name, chat_id, msg2):
     markup = telebot.types.ReplyKeyboardRemove()
@@ -797,7 +789,7 @@ def remove_user_to_role(message, role_name, chat_id, msg2):
                             continue
                 continue
             try:
-                
+                bot2.start()
                 user_obj = bot2.get_chat(user)
                 user_id = user_obj.id
                 user_name = user_obj.username
@@ -813,9 +805,11 @@ def remove_user_to_role(message, role_name, chat_id, msg2):
                 roles.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$pull': {'roles': role_name}})
                 roles.update_one({'chat_id':chat_id,'role_name':role_name},
                                 {'$inc':{'count':-1}},upsert=True)
-                
-            except Exception:
-                bot.send_message(message.chat.id,"Unexpected Error Happen")
+                bot2.stop()
+
+            except Exception as e:
+                print(e)
+                bot.send_message(message.chat.id,f"Unexpected Error Happen - {e}")
                 pass
         message_test += f"\n已在此聊天中被移除 {role_name} 角色"
         if "•" in message_test:
@@ -943,14 +937,14 @@ def role_giver(chat_id , user_id):
                 if data:
                     return
                 try:
-                    
+                    bot2.start()
                     usser = bot2.get_users(user_id)
                     usser_name = usser.username
                     roles.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$addToSet': {'roles': role_name},'$set': {'first_name': usser_name}}, upsert=True)
                     roles.update_one({'chat_id':chat_id,'role_name':role_name},
                              {'$inc':{'count':1}},upsert=True)
                     is_give_role = False
-                    
+                    bot2.stop()
                 except Exception:
                     pass
 
@@ -1088,14 +1082,6 @@ def handle_inline_query(query):
     bot.answer_inline_query(query.id, results)
 
 
-time_threa = threading.Thread(target=alive_check)
-time_threa.start()
-def check():
-    bot2.run()
-
-time_threa = threading.Thread(target=check)
-time_threa.start()
-
 @bot.message_handler(func=lambda message: True)
 def count_messages(message):
     user_id = message.from_user.id
@@ -1106,7 +1092,11 @@ def count_messages(message):
                           {'$inc': {'message_count': 1}},
                           upsert=True)
 
-bot2.send_message("@bnsl_boy","test_send")
+async def main():
+    # Start the Pyrogram client
+    # Start the telebot polling (within the same event loop)
+    bot.polling()
 
-
-bot.infinity_polling()
+if __name__ == "__main__":
+    # Run the main function within the asyncio event loop
+    asyncio.run(main())
