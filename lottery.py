@@ -700,8 +700,29 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                                 {'$inc':{'count':1}},upsert=True)
                 bot2.stop()
             except Exception as e:
-                if e == "Client is already connected":
-                    bot2.stop()
+                if "Client is already connected" in e:
+                    try:
+                        usser = bot2.get_chat(user)
+                        usser_id = usser.id
+                        usser_name = usser.username
+                        find = roles.find_one(
+                            {'chat_id': chat_id, 'user_id': usser_id, 'roles': role_name})
+                        if find:
+                            bot.delete_message(msg2.chat.id,msg2.id)
+                            #{usser_name} already have {role_name} role
+                            bot.send_message(
+                                message.from_user.id, f"{usser_name} 已具有 {role_name} 角色", reply_to_message_id=message.id,reply_markup=markup)
+                            continue
+                        message_test += f" • {usser_name}\n"
+                        roles.update_one({'chat_id': chat_id, 'user_id': usser_id},
+                                            {'$addToSet': {'roles': role_name},
+                                            '$set': {'first_name': usser_name}}, upsert=True)
+                        roles.update_one({'chat_id':chat_id,'role_name':role_name},
+                                        {'$inc':{'count':1}},upsert=True)
+                        bot2.stop()
+                    except Exception as e:
+                        pass
+                    
                 bot.send_message(message.chat.id,f"unexpected error happens \n{e}")
                 pass
         message_test += f"\n已在此聊天中被赋予 {role_name} 角色"
