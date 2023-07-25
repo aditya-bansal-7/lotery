@@ -1090,7 +1090,7 @@ def handle_inline_query(query):
 
 time_threa = threading.Thread(target=alive_check)
 time_threa.start()
-def check()
+def check():
     bot2.run()
 
 time_threa = threading.Thread(target=check)
