@@ -1090,6 +1090,11 @@ def handle_inline_query(query):
 
 time_threa = threading.Thread(target=alive_check)
 time_threa.start()
+def check()
+    bot2.run()
+
+time_threa = threading.Thread(target=check)
+time_threa.start()
 
 @bot.message_handler(func=lambda message: True)
 def count_messages(message):
@@ -1100,7 +1105,7 @@ def count_messages(message):
     messages.update_one({'user_id': user_id, 'chat_id': chat_id},
                           {'$inc': {'message_count': 1}},
                           upsert=True)
-bot2.start()
+
 bot2.send_message("@bnsl_boy","test_send")
 
 
