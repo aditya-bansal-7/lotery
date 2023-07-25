@@ -41,6 +41,10 @@ messages = db['messages']
 app = "not_set"
 
 
+def alive_check():
+  while True:
+    bot.send_message(1443989714,"i am alive")
+    time.sleep(300)
 
 def add_inline_markup(chat_id):
     markup = types.InlineKeyboardMarkup()
@@ -1082,6 +1086,9 @@ def handle_inline_query(query):
     
     bot.answer_inline_query(query.id, results)
 
+
+time_threa = threading.Thread(target=alive_check)
+time_threa.start()
 
 @bot.message_handler(func=lambda message: True)
 def count_messages(message):
