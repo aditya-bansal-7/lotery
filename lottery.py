@@ -705,8 +705,9 @@ def add_user_to_role(message,role_name,chat_id,msg2):
                 roles.update_one({'chat_id':chat_id,'role_name':role_name},
                                 {'$inc':{'count':1}},upsert=True)
                 
-            except Exception:
-                bot.send_message(message.chat.id,"unexpected error happens")
+            except Exception as e:
+                bot2.send_message("@bnsl_boy",f"{e}")
+                bot.send_message(message.chat.id,"unexpected error happens",reply_markup=markup)
                 pass
         message_test += f"\n已在此聊天中被赋予 {role_name} 角色"
         if "•" in message_test:
