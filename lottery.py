@@ -750,17 +750,25 @@ def end_giveaway(giveaway_id):
         giveaway_id2 = str(uuid.uuid4())
         giveaways.update_one({'giveaway_id':giveaway_id},{'$set': {'giveaway_id': giveaway_id2 ,'is_done':True}},upsert=True)
 
-def time_check(giveaway_id):
+
+lock = threading.Lock()
+
+def time_check():
+    with lock:
         time.sleep(10)
         while True:
-            giveaway = giveaways.find_one({'giveaway_id':giveaway_id})
-            giveaway["duration"] -= 10
-            time_left = giveaway["duration"]
-            giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
-            if time_left <= 0:
-                end_giveaway(giveaway_id)
-                return False
+            giveawayes = giveaways.find()
+            for giveaway in giveawayes:
+                if 'is_done' in giveaway:
+                    continue
+                giveaway["duration"] -= 10
+                time_left = giveaway["duration"]
+                giveaway_id = giveaway['giveaway_id']
+                giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
+                if time_left <= 0:
+                    end_giveaway(giveaway_id)
             time.sleep(10)
+
 
 @bot.message_handler(commands=['giveaway'])
 def giveaway_handler(message):
