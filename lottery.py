@@ -839,7 +839,7 @@ def giveaway_handler(message):
         reply_markup.add(button12)
     bot.send_message(chat_id, message_text, reply_markup=reply_markup)
     bot.delete_message(message.chat.id, message.id)
-    time_thread = threading.Thread(target=time_check,args=(giveaway_id,))
+    time_thread = threading.Thread(target=time_check)
     time_thread.start()
 
 
