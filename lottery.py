@@ -837,25 +837,32 @@ def giveaway_handler(message):
 
 @bot.inline_handler(lambda query: True)
 def handle_inline_query(query):
-    # Process the inline query and provide a list of results
-    results = []
-    user_id = query.from_user.id
-    data = queries.find_one({'user_id': user_id})
-    if query.query:
-        if data and 'results' in data:
+    try:
+        # Process the inline query and provide a list of results
+        results = []
+        user_id = query.from_user.id
+        data = queries.find_one({'user_id': user_id})
+
+        if query.query and data and 'results' in data:
             for result in data['results']:
                 if query.query in result['title']:
                     results.append(
-                        telebot.types.InlineQueryResultArticle(
+                        types.InlineQueryResultArticle(
                             id=result['id'],
-                            title= result['title'],
-                            input_message_content=telebot.types.InputTextMessageContent(
+                            title=result['title'],
+                            input_message_content=types.InputTextMessageContent(
                                 message_text=result['input_message_content']['message_text']
                             )
                         )
                     )
+
+        bot.answer_inline_query(query.id, results)
+
+    except Exception as e:
+        # Log the error for debugging purposes (you can use your preferred logging mechanism)
+        print(f"Error processing inline query: {e}")
+        pass
     
-    bot.answer_inline_query(query.id, results)
 
 
 @bot.message_handler(func=lambda message: True)
