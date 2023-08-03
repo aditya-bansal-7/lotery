@@ -38,6 +38,8 @@ queries = db['query']
 
 messages = db['messages']
 
+dices = db['dices']
+
 app = "not_set"
 
 
@@ -47,9 +49,9 @@ def add_inline_markup(chat_id):
     button1 = types.InlineKeyboardButton(text="📜Roles" , callback_data=f"roles:{chat_id}")
     button2 = InlineKeyboardButton(text="🎉Giveaways",callback_data=f"giveaways:{chat_id}")
     button3 = InlineKeyboardButton(text="👥Invite",callback_data=f"invite:{chat_id}")
-    markup.add(button1)
-    markup.add(button2)
-    markup.add(button3)
+    button4 = InlineKeyboardButton(text="🎰 Dice Giveaway",callback_data=f"dice_giveaway:{chat_id}")
+    markup.add(button1,button3)
+    markup.add(button2,button4)
     return markup
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -447,7 +449,180 @@ def callback_handler(call):
         bot.answer_callback_query(call.id,"working on it")
     elif call.data.startswith(("invite:")):
         bot.answer_callback_query(call.id,"working on it")
-         
+    elif call.data.startswith(("dice_giveaway:")):
+        chat_id = int(call.data.split(":")[1])
+        markup = InlineKeyboardMarkup()
+        button1 = InlineKeyboardButton("➕ Create New" , callback_data=f"create_dice:{chat_id}")
+        markup.add(button1)
+        data = dices.find({'chat_id':chat_id})
+        if data:
+            button2 = InlineKeyboardButton("⏳History" , callback_data=f"history_dice:{chat_id}")
+            button3 = InlineKeyboardButton("✅Saved Data",callback_data=f"data_dice:{chat_id}")
+            markup.add(button2,button3)
+        button2 = InlineKeyboardButton(text="🔙Back",callback_data=f"settings:{chat_id}")
+        markup.add(button2)
+        text = """骰子抽奖菜单
+
+选择一个选项：
+➕ Create New - 创建一个新的骰子活动。
+以下按钮正在开发中：
+⏳ History - 查看以前的骰子活动。
+✅ Saved Data - 查看保存的骰子数据。"""
+        bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=markup)
+    elif call.data.startswith(("create_dice:")):
+        chat_id = int(call.data.split(":")[1])
+        markup = InlineKeyboardMarkup(row_width=5)
+        button1 = InlineKeyboardButton("🎲" , callback_data=f"emoji:🎲:{chat_id}")
+        button2 = InlineKeyboardButton("🎯" , callback_data=f"emoji:🎯:{chat_id}")
+        button3 = InlineKeyboardButton("🏀" , callback_data=f"emoji:🏀:{chat_id}")
+        button4 = InlineKeyboardButton("⚽️" , callback_data=f"emoji:⚽️:{chat_id}")
+        button5 = InlineKeyboardButton("🎳" , callback_data=f"emoji:🎳:{chat_id}")
+        markup.add(button1,button2,button3,button4,button5)
+        button6 = InlineKeyboardButton(text="🔙Back",callback_data=f"dice_giveaway:{chat_id}")
+        markup.add(button6)
+        text = """🎁 骰子赠品抽奖
+
+选择其中一个 🎲、🎯、🏀、⚽️、🎳 来创建抽奖。
+设定每个人可以参与的次数以及抽奖结束时间。
+群成员可以发送选择的表情来获得积分。
+当抽奖结束时，拥有最高积分的参与者获胜。"""
+        bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=markup)
+    elif call.data.startswith(("emoji:")):
+        chat_id = int(call.data.split(":")[2])
+        emoji = call.data.split(":")[1]
+        text = f"🎉 表情幸运抽奖 🎉\n\n🍀 发送 {emoji} 表情参与抽奖，获得积分 🍀\n\n🎁 加入 ❓"
+        markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+        button1 = KeyboardButton("🚫Cancle")
+        markup.add(button1)
+        msg2 = bot.send_message(call.message.chat.id,text,reply_markup=markup)
+        bot.register_next_step_handler(call.message,dice_event_1,emoji,chat_id,msg2)
+    elif call.data.startswith(("diceroleadd:")):
+        title = call.data.split(":")[2]
+        chat_id = int(call.data.split(":")[1])
+        data = roles.find({'chat_id':chat_id})
+        markup = InlineKeyboardMarkup()
+        text = call.message.text
+        is_role = False
+        if data:
+            for da in data:
+                if 'role_name' in da:
+                    count = da['count']
+                    role = da['role_name']
+                    button1 = InlineKeyboardButton(f"{role} [{count}]",callback_data=f"role_dicegiveaway:{role}:{title}")
+                    markup.add(button1)
+                    is_role = True
+            text += "\n\n选择您要添加的角色 👇"
+        if is_role:
+            bot.edit_message_text(text,call.message.chat.id,call.message.id,reply_markup=markup)    
+        else:
+            bot.answer_callback_query(call.id,"No Role Found")
+    elif call.data.startswith(("role_dicegiveaway:")):
+        title = call.data.split(":")[2]
+        role_name = call.data.split(":")[1]
+        updated_results = []
+        query_document = queries.find_one({'user_id':call.from_user.id})
+        for result in query_document['results']:
+        # If the 'title' matches, update the 'message_text' field
+            if result['title'] == title:
+                result['input_message_content']['message_text'] += f" role:{role_name}"
+            updated_results.append(result)
+        queries.update_one({'user_id': call.from_user.id}, {'$set': {'results': updated_results}})
+        text = call.message.text
+        sub = "\n\n选择您要添加的角色 👇"
+        text = text[:-len(sub)]
+        text += f"\n\n🌟要参加此幸运抽奖，您需要拥有 {role_name} 角色"
+        markup1 = InlineKeyboardMarkup()
+        button1 = InlineKeyboardButton("Send Dice Giveaway",switch_inline_query=f"{title}")
+        markup1.add(button1)
+        bot.edit_message_text(text,call.message.chat.id,call.message.id,reply_markup=markup1)
+    elif call.data.startswith(("history_dice:")):
+        bot.answer_callback_query(call.id,"working on it")
+        # chat_id = int(call.data.split(":")[1])
+        # data = giveaways.find({'chat_id': chat_id})
+        # if data:
+        #     for da in data:
+        #         if 'is_done' in da:
+        #             giveaway_id = da['giveaway_id']
+        #             amount = da[amount]
+    elif call.data.startswith(("data_dice:")):
+        bot.answer_callback_query(call.id,"working on it")
+
+
+
+def dice_event_1(message,emoji,chat_id,msg2):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("🚫Cancle")
+    markup.add(button1)
+    if message.text == "🚫Cancle":
+            bot.delete_message(msg2.chat.id, msg2.id)
+            bot.delete_message(message.chat.id, message.id)
+            return
+    reward = message.text
+    bot.delete_message(msg2.chat.id, msg2.id)
+    msg2 = bot.send_message(message.chat.id,f"🎉 表情幸运抽奖 🎉\n\n🍀 发送 {emoji} 表情参与抽奖，获得积分 🍀\n\n🎁 加入 {reward} \n\n🏆 ❓ 次机会参与！🌟",reply_markup=markup)
+    bot.register_next_step_handler(message,dice_event_2,emoji,chat_id,reward,msg2)
+
+def dice_event_2(message,emoji,chat_id,reward,msg2):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("🚫Cancle")
+    markup.add(button1)
+    if message.text == "🚫Cancle":
+            bot.delete_message(msg2.chat.id, msg2.id)
+            bot.delete_message(message.chat.id, message.id)
+            return
+    try:
+        chances = int(message.text)
+    except Exception:
+        bot.delete_message(msg2.chat.id, msg2.id)
+        bot.send_message(message.chat.id,"Send me no. of chances like 3,5,7",reply_markup=markup)
+        bot.register_next_step_handler(message,dice_event_2,emoji,chat_id,reward,msg2)
+        return
+    bot.delete_message(msg2.chat.id, msg2.id)
+    msg2 = bot.send_message(message.chat.id,f"🎉 表情幸运抽奖 🎉\n\n🍀 发送 {emoji} 表情参与抽奖，获得积分 🍀\n\n🎁 加入 {reward} \n\n🏆 {chances} 次机会参与！🌟\n\n⏰ 倒计时 - ❓ 🔥",reply_markup=markup)
+    bot.register_next_step_handler(message,dice_event_3,emoji,chat_id,reward,chances,msg2)
+
+def dice_event_3(message,emoji,chat_id,reward,chances,msg2):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("🚫Cancle")
+    markup.add(button1)
+    if message.text == "🚫Cancle":
+            bot.delete_message(msg2.chat.id, msg2.id)
+            bot.delete_message(message.chat.id, message.id)
+            return
+    duration = message.text
+    try:
+        duration = int(duration[:-1]) * {"d": 86400, "h": 3600, "m": 60, "s": 1}[duration[-1]]
+    except Exception as e:
+        bot.delete_message(message.chat.id, message.id)
+        bot.send_message(message.chat.id,"Error : Duration should be in the format 1d, 1h, 1m, or 1s.",reply_markup=markup)
+        bot.register_next_step_handler(message,dice_event_3,emoji,chat_id,reward,chances,msg2)
+        return
+    time_left = duration
+    time_left_str = f"{time_left // 86400}d:{(time_left % 86400) // 3600}h:{(time_left % 3600) // 60}m:{time_left % 60}s"
+    id = str(uuid.uuid4())
+    reward = reward.replace(" ", "_")
+    message_text = f"/dices {emoji} {chances} {reward} {duration}s"
+    title = str(uuid.uuid4())
+    result = {
+            "id": id,
+            "title": title,
+            "input_message_content": {
+                "message_text": message_text
+            }
+        }
+    queries.update_one(
+            {'user_id': message.from_user.id},
+            {'$addToSet': {'results': result}},
+            upsert=True
+        )
+    markup1= InlineKeyboardMarkup()
+    bot.delete_message(msg2.chat.id, msg2.id)
+    button1 = InlineKeyboardButton("Send Dice Giveaway",switch_inline_query=f"{title}")
+    markup1.add(button1)
+    button2 = InlineKeyboardButton("Add Role Required",callback_data=f"diceroleadd:{chat_id}:{title}")
+    markup1.add(button2)
+    bot.send_message(message.chat.id,f"🎉 表情幸运抽奖 🎉\n\n🍀 发送 {emoji} 表情参与抽奖，获得积分 🍀\n\n🎁 加入 {reward} \n\n🏆 {chances} 次机会参与！🌟\n\n⏰ 倒计时 - {time_left_str} 🔥\n\n🎊 取得高分 & 赢得大奖！🎁\n\n💥 不要错过！🎉" , reply_markup=markup1)
+
 def process_to_add(message,msg2,chat_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
     button1 = KeyboardButton("🚫Cancle")
@@ -757,17 +932,27 @@ def time_check():
     with lock:
         time.sleep(10)
         while True:
+            i = 1
             giveawayes = giveaways.find()
+            print(giveawayes)
             for giveaway in giveawayes:
+                print(f"\n\n{giveaway}")
                 if 'is_done' in giveaway:
                     continue
                 giveaway["duration"] -= 10
+                i += 1
                 time_left = giveaway["duration"]
                 giveaway_id = giveaway['giveaway_id']
                 giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
                 if time_left <= 0:
                     end_giveaway(giveaway_id)
+            if i == 1:
+                return False
             time.sleep(10)
+
+time_thread = threading.Thread(target=time_check)
+time_thread.start()
+
 
 
 @bot.message_handler(commands=['giveaway'])
