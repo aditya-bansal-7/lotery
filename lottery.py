@@ -934,9 +934,9 @@ def time_check():
         while True:
             i = 1
             giveawayes = giveaways.find()
-            print(giveawayes)
+            
             for giveaway in giveawayes:
-                print(f"\n\n{giveaway}")
+                
                 if 'is_done' in giveaway:
                     continue
                 giveaway["duration"] -= 10
