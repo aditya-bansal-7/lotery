@@ -971,14 +971,15 @@ def giveaway_handler(message):
     # Define a dictionary to map duration units to seconds
     duration_units = {"d": 86400, "h": 3600, "m": 60, "s": 1}
     is_how_to = False
-    try:
-        amount, num_winners, duration = args[:3]
-        role = None
-        amount = amount.replace("_"," ")
-        duration = int(duration[:-1]) * duration_units[duration[-1]]
-    except (ValueError, KeyError, IndexError):
-        bot.reply_to(message, "命令格式无效。用法：/giveaway <奖励金额> <货币> <获奖人数> <持续时间> <*邀请人数> <*描述>")
-    
+    if len(args) >= 3:
+        try:
+            amount, num_winners, duration = args[:3]
+            role = None
+            amount = amount.replace("_"," ")
+            duration = int(duration[:-1]) * duration_units[duration[-1]]
+        except (ValueError, KeyError, IndexError):
+            bot.reply_to(message, "命令格式无效。用法：/giveaway <奖励金额> <货币> <获奖人数> <持续时间> <*邀请人数> <*描述>")
+        
     if len(args) == 4:
         role = args[3]
         data = roles.find_one({'chat_id':message.chat.id,'role_name':role})
