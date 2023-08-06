@@ -350,41 +350,9 @@ def callback_handler(call):
                 if 'how_to_get' in data:
                     is_how_to = True
                     button12 = InlineKeyboardButton(f"如何获得 {role}", callback_data=f"giveaway_how_to:{role}:{chat_id}")
-        # if user_id in blacklist:
-        #     bot.answer_callback_query(call.id, "You are blacklisted and cannot join this giveaway.",show_alert=True)
-        #     return
-        try:
-            bot.get_chat_member(chat_id,user_id)
-        except Exception as e:
-            bot.answer_callback_query(call.id, "您必须是该群组的成员才能参加赠品活动。",show_alert=True)
-            return
-        if call.data.startswith(("join_giveaway:")):
-            giveaway_id = call.data.split(":")[1]
-            user_id = call.from_user.id
-            if user_id in giveaway["participants"]:
-                bot.answer_callback_query(call.id, "您已经参加过了此赠品活动。",show_alert=True)
-                return
-            current_time = time.time()
-            giveaway["last_refresh_time"] = current_time
-            giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"last_refresh_time": giveaway["last_refresh_time"]}})
-            giveaway["participants"].append(user_id)
-            giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"]}})
-            time_left = giveaway["duration"]
-            num_participants = len(giveaway["participants"])
-            join_text = f"参加抽奖 [{num_participants}]"
-            join_call = f"join_giveaway:{giveaway_id}"
-            leave_call = f"leave_giveaway:{giveaway_id}"
-            refresh_test = f"刷新时间 ({time_left//86400}d:{time_left%86400//3600}h:{time_left%3600//60}m:{time_left%60}s)"
-            refresh_call = f"Refresh:{giveaway_id}"
-            reply_markup = telebot.types.InlineKeyboardMarkup()
-            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, callback_data=join_call))
-            reply_markup.add(telebot.types.InlineKeyboardButton("退出抽奖", callback_data=leave_call))
-            reply_markup.add(telebot.types.InlineKeyboardButton(refresh_test, callback_data=refresh_call))
-            if is_how_to:
-                reply_markup.add(button12)
-            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=reply_markup)
-            bot.answer_callback_query(call.id, "您已成功参加了赠品活动。",show_alert=True)
-        elif call.data.startswith(("leave_giveaway:")):
+        
+
+        if call.data.startswith(("leave_giveaway:")):
             giveaway_id = call.data.split(":")[1]
             if user_id not in giveaway["participants"]:
                 bot.answer_callback_query(call.id, "您尚未参加此赠品活动。",show_alert=True)
@@ -393,16 +361,15 @@ def callback_handler(call):
             giveaway["last_refresh_time"] = current_time
             giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"last_refresh_time": giveaway["last_refresh_time"]}})
             giveaway["participants"].remove(user_id)
-            giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"]}})
-            num_participants = len(giveaway["participants"])
+            giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"],'is_edit':True}})
+            url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
             time_left = giveaway["duration"]
-            join_text = f"参加抽奖 [{num_participants}]"
-            join_call = f"join_giveaway:{giveaway_id}"
+            join_text = f"参加抽奖"
             leave_call = f"leave_giveaway:{giveaway_id}"
             refresh_test = f"刷新时间 ({time_left//86400}d:{time_left%86400//3600}h:{time_left%3600//60}m:{time_left%60}s)"
             refresh_call = f"Refresh:{giveaway_id}"
             reply_markup = telebot.types.InlineKeyboardMarkup()
-            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, callback_data=join_call))
+            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, url=url))
             reply_markup.add(telebot.types.InlineKeyboardButton("退出抽奖", callback_data=leave_call))
             reply_markup.add(telebot.types.InlineKeyboardButton(refresh_test, callback_data=refresh_call))
             if is_how_to:
@@ -423,19 +390,20 @@ def callback_handler(call):
                 bot.answer_callback_query(call.id, "You have not joined this giveaway.",show_alert=True)
                 return
             time_left = giveaway["duration"]
-            num_participants = len(giveaway["participants"])
-            join_text = f"参加抽奖 [{num_participants}]"
-            join_call = f"join_giveaway:{giveaway_id}"
+            join_text = f"参加抽奖"
+            url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
+            
             leave_call = f"leave_giveaway:{giveaway_id}"
             refresh_test = f"刷新时间 ({time_left//86400}d:{time_left%86400//3600}h:{time_left%3600//60}m:{time_left%60}s)"
             refresh_call = f"Refresh:{giveaway_id}"
             reply_markup = telebot.types.InlineKeyboardMarkup()
-            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, callback_data=join_call))
+            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, url=url))
             reply_markup.add(telebot.types.InlineKeyboardButton("退出抽奖", callback_data=leave_call))
             reply_markup.add(telebot.types.InlineKeyboardButton(refresh_test, callback_data=refresh_call))
             if is_how_to:
                 reply_markup.add(button12)
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=reply_markup)
+        
     elif call.data.startswith(("history_giveaway:")):
         bot.answer_callback_query(call.id,"working on it")
         # chat_id = int(call.data.split(":")[1])
@@ -934,9 +902,7 @@ def time_check():
         while True:
             i = 1
             giveawayes = giveaways.find()
-            
             for giveaway in giveawayes:
-                
                 if 'is_done' in giveaway:
                     continue
                 giveaway["duration"] -= 10
@@ -946,13 +912,22 @@ def time_check():
                 giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
                 if time_left <= 0:
                     end_giveaway(giveaway_id)
+                if 'is_edit' in giveaway and giveaway['is_edit'] is True:
+                    chat_id = giveaway['chat_id']
+                    msg_id = giveaway['message_id']
+                    num_win = len(giveaway['participants'])
+                    message_text = f"加入的用户数量 - {num_win} "
+                    if 'del_id' in giveaway:
+                        bot.delete_message(chat_id,giveaway['del_id'])
+                    msg = bot.send_message(chat_id,message_text,reply_to_message_id=msg_id)
+                    giveaways.update_one({'giveaway_id':giveaway_id},{'$set':{'is_edit':False,'del_id':msg.id}},upsert=True)
             if i == 1:
                 return False
             time.sleep(10)
 
+
 time_thread = threading.Thread(target=time_check)
 time_thread.start()
-
 
 
 @bot.message_handler(commands=['giveaway'])
@@ -979,7 +954,8 @@ def giveaway_handler(message):
             duration = int(duration[:-1]) * duration_units[duration[-1]]
         except (ValueError, KeyError, IndexError):
             bot.reply_to(message, "命令格式无效。用法：/giveaway <奖励金额> <货币> <获奖人数> <持续时间> <*邀请人数> <*描述>")
-        
+            return
+    
     if len(args) == 4:
         role = args[3]
         data = roles.find_one({'chat_id':message.chat.id,'role_name':role})
@@ -1004,7 +980,8 @@ def giveaway_handler(message):
         "participants": [],
         "last_refresh_time": time.time(),
         "winners":[],
-        "message_id": message.message_id + 1
+        "message_id": message.message_id + 1,
+        "is_edit":False
     }
 
     giveaways.insert_one(document)
@@ -1016,15 +993,22 @@ def giveaway_handler(message):
     if role :
         message_text += f"\n\n要参加此幸运抽奖，您需要拥有 {role} 角色"
 
-    # Add the unique identifier as a callback data to the inline keyboard button
-    text = f"参加抽奖 [0]"
-    join_call = f"join_giveaway:{giveaway_id}"
+    url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
+    
+    text = f"参加抽奖"
+    leave_call = f"leave_giveaway:{giveaway_id}"
+    refresh_text = f"刷新时间 ({time_left_str})"
+    refresh_call = f"Refresh:{giveaway_id}"
     reply_markup = telebot.types.InlineKeyboardMarkup()
-    reply_markup.add(telebot.types.InlineKeyboardButton(text, callback_data=join_call))
+    reply_markup.add(telebot.types.InlineKeyboardButton(text,url=url))
+    reply_markup.add(telebot.types.InlineKeyboardButton("退出抽奖", callback_data=leave_call))
+    reply_markup.add(telebot.types.InlineKeyboardButton(refresh_text, callback_data=refresh_call))
+
     if is_how_to:
         reply_markup.add(button12)
-    bot.send_message(chat_id, message_text, reply_markup=reply_markup)
-    bot.delete_message(message.chat.id, message.id)
+    msg = bot.send_message(chat_id, message_text, reply_markup=reply_markup)
+    # bot.delete_message(message.chat.id, message.id)
+    giveaways.update_one({'giveaway_id': giveaway_id},{'$set':{'message_id':msg.id}},upsert=True)
     time_thread = threading.Thread(target=time_check)
     time_thread.start()
 
