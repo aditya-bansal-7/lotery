@@ -362,19 +362,7 @@ def callback_handler(call):
             giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"last_refresh_time": giveaway["last_refresh_time"]}})
             giveaway["participants"].remove(user_id)
             giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"],'is_edit':True}})
-            url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
-            time_left = giveaway["duration"]
-            join_text = f"参加抽奖"
-            leave_call = f"leave_giveaway:{giveaway_id}"
-            refresh_test = f"刷新时间 ({time_left//86400}d:{time_left%86400//3600}h:{time_left%3600//60}m:{time_left%60}s)"
-            refresh_call = f"Refresh:{giveaway_id}"
-            reply_markup = telebot.types.InlineKeyboardMarkup()
-            reply_markup.add(telebot.types.InlineKeyboardButton(join_text, url=url))
-            reply_markup.add(telebot.types.InlineKeyboardButton("退出抽奖", callback_data=leave_call))
-            reply_markup.add(telebot.types.InlineKeyboardButton(refresh_test, callback_data=refresh_call))
-            if is_how_to:
-                reply_markup.add(button12)
-            bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=reply_markup)
+            
             bot.answer_callback_query(call.id, "您已成功离开了赠品活动。",show_alert=True)
         elif call.data.startswith(("Refresh:")):
             current_time = time.time()
