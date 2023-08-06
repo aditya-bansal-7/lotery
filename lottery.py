@@ -995,7 +995,7 @@ def giveaway_handler(message):
     if is_how_to:
         reply_markup.add(button12)
     msg = bot.send_message(chat_id, message_text, reply_markup=reply_markup)
-    # bot.delete_message(message.chat.id, message.id)
+    bot.delete_message(message.chat.id, message.id)
     giveaways.update_one({'giveaway_id': giveaway_id},{'$set':{'message_id':msg.id}},upsert=True)
     time_thread = threading.Thread(target=time_check)
     time_thread.start()
