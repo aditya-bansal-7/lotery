@@ -5,16 +5,11 @@ import time
 from telebot import types
 from telebot.types import InlineKeyboardButton,InlineKeyboardMarkup,ReplyKeyboardMarkup,KeyboardButton
 import threading
-from pyrogram import Client 
 import random
 import asyncio
+from datetime import datetime , timedelta
+
 bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
-
-API_ID = '13537456'
-
-API_HASH = '3f6b781f6a730e8f76e7cb1f863727c5'
-
-bot2 = Client("my_eszsvxxt", api_id=API_ID, api_hash=API_HASH,bot_token="6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
 password = 'VeJ7EH5TK13U4IQg'
 cluster_url = 'mongodb+srv://bnslboy:' + \
@@ -52,6 +47,22 @@ def add_inline_markup(chat_id):
     button4 = InlineKeyboardButton(text="🎰 Dice Giveaway",callback_data=f"dice_giveaway:{chat_id}")
     markup.add(button1,button3)
     markup.add(button2,button4)
+    return markup
+
+
+def add_inline_invite(chat_id,txt,y):
+    markup = InlineKeyboardMarkup()
+    button3 = InlineKeyboardButton(f"{txt}", callback_data=f"invite_message:{chat_id}:{y}")
+    button4 = InlineKeyboardButton("Active Roles📔", callback_data=f"invite_roles:{chat_id}")
+    markup.add(button3, button4)
+    button5 = InlineKeyboardButton("Weekly LeaderBoard", callback_data=f"week_invite:{chat_id}")
+    button6 = InlineKeyboardButton("Custom LeaderBoard", callback_data=f"custom_invite:{chat_id}")
+    markup.add(button5, button6)
+    button0 = InlineKeyboardButton("Export All Data 🖨", callback_data=f"export_invite:{chat_id}")
+    button1 = InlineKeyboardButton("🗑 Erase All Data", callback_data=f"erase_invite:{chat_id}")
+    markup.add(button0, button1)
+    button2 = InlineKeyboardButton(text="🔙 Back", callback_data=f"settings:{chat_id}")
+    markup.add(button2)
     return markup
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -403,8 +414,105 @@ def callback_handler(call):
         #             amount = da[amount]
     elif call.data.startswith(("data_giveaway:")):
         bot.answer_callback_query(call.id,"working on it")
-    elif call.data.startswith(("invite:")):
-        bot.answer_callback_query(call.id,"working on it")
+        elif call.data.startswith(("invite:")):
+        chat_id = int(call.data.split(":")[1])
+        bot_member = bot.get_chat_member(chat_id, 5967390922)
+        if bot_member.can_invite_users is False:
+            bot.answer_callback_query(call.id,"❌ Insufficient permissions for the robot, please grant at least the following admin permissions:\n- Invite members via link",show_alert=True)
+            return
+
+        msg_text = "<b>Invitation Management </b>\n<i>Members in the group use the /link to automatically generate links.\nMember can use /invites to check their invites .\nMember can use /topinvites to check top 10 of group</i>\n\n<b>Statistics</b>\n"
+        data = owners.find_one({'chat_id':chat_id})
+        add_count = data.get('add_count',0)
+        invite_count = data.get('invite_count',0)
+        num_count = data.get('user_count',0)
+        
+        if 'link_count' in data:
+            link_count = data['user_count']
+        else:
+            link_count = 0
+        msg_text += f"<i>Total number of invitations = {num_count} ({add_count} by add button , {invite_count} by invite link) </i>\n"
+        msg_text += f"<i>Total number of links generated =</i> {link_count}\n\n"
+        
+        if 'send_msg' in data and data['send_msg'] is True:
+            txt = "Send Message ✅"
+            y = "y"
+            # msg_text += f"<b>{txt} </b>- <i>Bot will send message when a user join via a invite link. Message contain who invites new member and his invite count. </i>\n"
+        else:
+            txt = "Send Message ❌"
+            y = "n"
+            # msg_text += f"<b>{txt} </b>- <i>Bot will not send message when a user join via a invite link. Message contain who invites new member and his invite count. </i>\n"
+        
+        
+        markup = add_inline_invite(chat_id,txt,y)
+        try:
+            bot.edit_message_text(msg_text, call.message.chat.id, call.message.id,parse_mode='HTML',reply_markup=markup)
+        except Exception:
+            pass
+    elif call.data.startswith(("invite_message:")):
+   
+        chat_id = int(call.data.split(":")[1])
+        y = call.data.split(":")[2]
+        if y == "y":
+            owners.update_one({'chat_id':chat_id},{'$set':{'send_msg':False}})
+            txt = "Send Message ❌"
+            y = "n"
+        elif y == "n":
+            owners.update_one({'chat_id':chat_id},{'$set':{'send_msg':True}})
+            txt = "Send Message ✅"
+            y = "y"
+            bot.answer_callback_query(call.id,text="When someone join via invite link \nBot send message be like -:\n\nPerson1 invites Person2",show_alert=True)
+        markup = add_inline_invite(chat_id,txt,y)
+        try:
+            bot.edit_message_reply_markup(call.message.chat.id,call.message.id,reply_markup=markup)
+        except Exception:
+            pass
+    elif call.data.startswith(("invite_roles:")):
+        chat_id = int(call.data.split(":")[1])
+        data = roles.find({'chat_id': chat_id, 'role_name': {'$exists': True}})
+        msg_txt = "Active roles || Invite count To Get\n\n"
+        i = 1
+        for da in data:
+            if 'is_auto_invite' in da and da['is_auto_invite'] is True:
+                count = da['invite_count']
+                role_name = da['role_name']
+                msg_txt += f"{i}. {role_name} -- {count}"
+                i = i + 1
+        if i == 1:
+            bot.answer_callback_query(call.id,"No role found which will auto given when user invites user.",show_alert=True)
+        else:
+            bot.answer_callback_query(call.id,msg_txt,show_alert=True)        
+    elif call.data.startswith(("week_invite:")):
+        chat_id = int(call.data.split(":")[1])
+        leaderboard_invite(chat_id,604800,call.from_user.id)
+    elif call.data.startswith(("custom_invite:")):
+        chat_id = int(call.data.split(":")[1])
+        markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+        button1 = KeyboardButton("🚫Cancle")
+        markup.add(button1)
+        bot.send_message(call.from_user.id,"Send me the time in the format of 1d,1h,1m,1s",reply_markup=markup)
+        bot.register_next_step_handler(call.message,invite_time,chat_id)
+    elif call.data.startswith(("export_invite:")):
+        bot.answer_callback_query(call.id,"Working on it")
+    elif call.data.startswith(("erase_invite:")):
+        chat_id = int(call.data.split(":")[1])
+        msg_text = """🚨🚨 Please note that all invitation links and invitation data will be cleared soon, the operation cannot be recovered, whether to continue:"""
+        markup = InlineKeyboardMarkup()
+        button1 = InlineKeyboardButton("Confim Delete All Invitation Data",callback_data=f"erase_invite1:{chat_id}")
+        button2 = InlineKeyboardButton(text="🔙 Back", callback_data=f"invite:{chat_id}")
+        markup.add(button1)
+        markup.add(button2)
+        bot.edit_message_text(msg_text,call.message.chat.id,call.message.id,reply_markup=markup)
+    elif call.data.startswith(("erase_invite1:")):
+        chat_id = int(call.data.split(":")[1])
+        data = invites.find({'chat_id':chat_id,'invite_link':{'$exists':True}})
+        for da in data:
+            invite_link = da['invite_link']
+            bot.revoke_chat_invite_link(chat_id,invite_link)
+        invites.delete_many({'chat_id':chat_id})
+        owners.update_one({'chat_id':chat_id},{'$set':{'add_count':0,'invite_count':0,'user_count':0}},upsert=True)
+        bot.send_message(call.from_user.id,"All Invitation Data Deleted Sucessfully")
+
     elif call.data.startswith(("dice_giveaway:")):
         chat_id = int(call.data.split(":")[1])
         markup = InlineKeyboardMarkup()
@@ -810,50 +918,50 @@ def change_role_name(message,old_role_name, chat_id,msg2):
         print(f"Error changing role name: {e}")
         bot.send_message(message.chat.id,"发生错误。请稍后再试。",reply_markup=markup)
 
-def role_giver(chat_id , user_id):
-    data = roles.find({"chat_id":chat_id})
-    is_give_role = False
+
+def leaderboard_invite(chat_id,sec,from_user):
+    seven_days_ago = datetime.now() - timedelta(seconds=sec)
+    data = invites.find({'chat_id':chat_id,'timestamp': {'$gte': seven_days_ago}})
+    bot.send_message(from_user,"This Process may takes few seconds in collecting data from database")
+    users = {}
+    i = 0
     for da in data:
-        if 'role_name' in da:
-            role_name = da['role_name']
-            if 'is_auto_invite' in da and da['is_auto_invite'] == True:
-                
-                count = da['invite_count']
-                da2 = invites.find_one({'chat_id':chat_id,'user_id':user_id})
-                if da2:
-                    invite_count = da2['regular_count']
-                    if invite_count >= count :
-                        is_give_role = True
-                    else:
-                        is_give_role = False
-                else:
-                    is_give_role = False
-            if 'is_auto_message' in da and da['is_auto_message'] == True:
-                count = da['message_count']
-                da2 = messages.find_one({'chat_id':chat_id,'user_id':user_id})
-                if da2:
-                    messages_count = da2['msg_count']
-                    if messages_count >= count:
-                        is_give_role = True
-                    else:
-                        is_give_role = False
-                else:
-                    is_give_role = False
-            if is_give_role == True:
-                data = roles.find_one({'chat_id': chat_id, 'user_id': user_id,'roles': role_name})
-                if data:
-                    return
-                try:
-                    bot2.start()
-                    usser = bot2.get_users(user_id)
-                    usser_name = usser.username
-                    roles.update_one({'chat_id': chat_id, 'user_id': user_id}, {'$addToSet': {'roles': role_name},'$set': {'first_name': usser_name}}, upsert=True)
-                    roles.update_one({'chat_id':chat_id,'role_name':role_name},
-                             {'$inc':{'count':1}},upsert=True)
-                    is_give_role = False
-                    bot2.stop()
-                except Exception:
-                    pass
+        if 'users' in da:
+            for (user_id,daa) in da['users'].items():
+                user_timestamp = daa['timestamp']
+                if user_timestamp and user_timestamp >= seven_days_ago:
+                    i = i + 1
+        if i == 0:
+            continue
+        first_name = da['first_name']
+        user_id = da['user_id']
+        username = da['username']
+        users[user_id] = {'first_name':first_name,'invites':i,'username':username}
+        i = 0
+    sorted_participants = sorted(users.items(), key=lambda x: x[1]['invites'], reverse=True)
+    msg_text = "Requested invite leaderboad --:\n\n"
+    for (user_id,data) in sorted_participants:
+        i = i + 1
+        msg_text += f"{i}. @{data['username']} - {data['invites']} invites\n"
+        if i >= 10:
+            break
+    bot.send_message(from_user ,msg_text , parse_mode='HTML')
+
+def invite_time(message,chat_id):
+    markup = types.ReplyKeyboardRemove()
+    if message.text == "🚫Cancle":
+        bot.send_message(message.chat.id,"Action Cancled 🚫",reply_markup=markup)
+        return
+    duration = message.text
+    duration_units = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+    try:
+        duration = int(duration[:-1]) * duration_units[duration[-1]]
+    except Exception:
+        bot.send_message(message.from_user.id,"Error occur when convering time\ntry again use format: 1d,1h,1m,1s")
+        bot.register_next_step_handler(message,invite_time,chat_id)
+        return
+    leaderboard_invite(chat_id,duration,message.from_user.id)
+
 
 def end_giveaway(giveaway_id):
     giveaway = giveaways.find_one({"giveaway_id": giveaway_id})
