@@ -414,7 +414,7 @@ def callback_handler(call):
         #             amount = da[amount]
     elif call.data.startswith(("data_giveaway:")):
         bot.answer_callback_query(call.id,"working on it")
-        elif call.data.startswith(("invite:")):
+    elif call.data.startswith(("invite:")):
         chat_id = int(call.data.split(":")[1])
         bot_member = bot.get_chat_member(chat_id, 5967390922)
         if bot_member.can_invite_users is False:
