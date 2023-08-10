@@ -416,7 +416,7 @@ def callback_handler(call):
         bot.answer_callback_query(call.id,"working on it")
     elif call.data.startswith(("invite:")):
         chat_id = int(call.data.split(":")[1])
-        bot_member = bot.get_chat_member(chat_id, 5967390922)
+        bot_member = bot.get_chat_member(chat_id, 6074378866)
         if bot_member.can_invite_users is False:
             bot.answer_callback_query(call.id,"❌ Insufficient permissions for the robot, please grant at least the following admin permissions:\n- Invite members via link",show_alert=True)
             return
