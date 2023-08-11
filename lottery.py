@@ -418,18 +418,23 @@ def callback_handler(call):
         chat_id = int(call.data.split(":")[1])
         bot_member = bot.get_chat_member(chat_id, 6074378866)
         if bot_member.can_invite_users is False:
-            bot.answer_callback_query(call.id,"❌ Insufficient permissions for the robot, please grant at least the following admin permissions:\n- Invite members via link",show_alert=True)
+            bot.answer_callback_query(call.id,"❌ 机器人权限不足，请至少授予以下管理员权限：\n\n⚜️通过链接邀请成员",show_alert=True)
             return
 
-        msg_text = "<b>Invitation Management </b>\n<i>Members in the group use the /link to automatically generate links.\nMember can use /invites to check their invites .\nMember can use /topinvites to check top 10 of group</i>\n\n<b>Statistics</b>\n"
+        msg_text = """<b>邀请管理</b>
+<i>群组成员可使用 /link 命令自动生成链接。
+成员可使用 /invites 命令检查他们的邀请。
+成员可使用 /topinvites 命令检查群组的前10名邀请。</i>
+
+<b>统计信息</b>"""
         data = owners.find_one({'chat_id':chat_id})
         add_count = data.get('add_count',0)
         invite_count = data.get('invite_count',0)
         num_count = data.get('user_count',0)
         link_count = data.get('link_count',0)
         
-        msg_text += f"<i>Total number of invitations = {num_count} ({add_count} by add button , {invite_count} by invite link) </i>\n"
-        msg_text += f"<i>Total number of links generated =</i> {link_count}\n\n"
+        msg_text += f"<i>邀请总数 = {num_count}（通过添加按钮增加的次数：{add_count}次，通过邀请链接增加的次数：{invite_count}次）</i>\n"
+        msg_text += f"<i>生成的链接总数 =</i> {link_count}\n\n"
         
         if 'send_msg' in data and data['send_msg'] is True:
             txt = "Send Message ✅"
@@ -458,7 +463,7 @@ def callback_handler(call):
             owners.update_one({'chat_id':chat_id},{'$set':{'send_msg':True}})
             txt = "Send Message ✅"
             y = "y"
-            bot.answer_callback_query(call.id,text="When someone join via invite link \nBot send message be like -:\n\nPerson1 invites Person2",show_alert=True)
+            bot.answer_callback_query(call.id,text="当有人通过邀请链接加入时，\n机器人发送的消息会是这样的：\n\nPerson1 邀请了 Person2",show_alert=True)
         markup = add_inline_invite(chat_id,txt,y)
         try:
             bot.edit_message_reply_markup(call.message.chat.id,call.message.id,reply_markup=markup)
@@ -467,7 +472,7 @@ def callback_handler(call):
     elif call.data.startswith(("invite_roles:")):
         chat_id = int(call.data.split(":")[1])
         data = roles.find({'chat_id': chat_id, 'role_name': {'$exists': True}})
-        msg_txt = "Active roles || Invite count To Get\n\n"
+        msg_txt = "活跃角色 || 获取邀请计数\n\n"
         i = 1
         for da in data:
             if 'is_auto_invite' in da and da['is_auto_invite'] is True:
@@ -476,7 +481,7 @@ def callback_handler(call):
                 msg_txt += f"{i}. {role_name} -- {count}"
                 i = i + 1
         if i == 1:
-            bot.answer_callback_query(call.id,"No role found which will auto given when user invites user.",show_alert=True)
+            bot.answer_callback_query(call.id,"没有找到自动授予用户邀请其他用户时的角色。",show_alert=True)
         else:
             bot.answer_callback_query(call.id,msg_txt,show_alert=True)        
     elif call.data.startswith(("week_invite:")):
@@ -487,15 +492,15 @@ def callback_handler(call):
         markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
         button1 = KeyboardButton("🚫Cancle")
         markup.add(button1)
-        bot.send_message(call.from_user.id,"Send me the time in the format of 1d,1h,1m,1s",reply_markup=markup)
+        bot.send_message(call.from_user.id,"1天，1小时，1分钟，1秒 的时间格式为：1d，1h，1m，1s。",reply_markup=markup)
         bot.register_next_step_handler(call.message,invite_time,chat_id)
     elif call.data.startswith(("export_invite:")):
         bot.answer_callback_query(call.id,"Working on it")
     elif call.data.startswith(("erase_invite:")):
         chat_id = int(call.data.split(":")[1])
-        msg_text = """🚨🚨 Please note that all invitation links and invitation data will be cleared soon, the operation cannot be recovered, whether to continue:"""
+        msg_text = """🚨🚨 请注意，所有邀请链接和邀请数据将很快被清除，此操作无法恢复，是否继续？"""
         markup = InlineKeyboardMarkup()
-        button1 = InlineKeyboardButton("Confim Delete All Invitation Data",callback_data=f"erase_invite1:{chat_id}")
+        button1 = InlineKeyboardButton("确认删除所有邀请数据吗",callback_data=f"erase_invite1:{chat_id}")
         button2 = InlineKeyboardButton(text="🔙 Back", callback_data=f"invite:{chat_id}")
         markup.add(button1)
         markup.add(button2)
@@ -508,7 +513,7 @@ def callback_handler(call):
             bot.revoke_chat_invite_link(chat_id,invite_link)
         invites.delete_many({'chat_id':chat_id})
         owners.update_one({'chat_id':chat_id},{'$set':{'add_count':0,'invite_count':0,'user_count':0}},upsert=True)
-        bot.send_message(call.from_user.id,"All Invitation Data Deleted Sucessfully")
+        bot.send_message(call.from_user.id,"所有邀请数据已成功删除。")
 
     elif call.data.startswith(("dice_giveaway:")):
         chat_id = int(call.data.split(":")[1])
@@ -919,7 +924,7 @@ def change_role_name(message,old_role_name, chat_id,msg2):
 def leaderboard_invite(chat_id,sec,from_user):
     seven_days_ago = datetime.now() - timedelta(seconds=sec)
     data = invites.find({'chat_id':chat_id,'timestamp': {'$gte': seven_days_ago}})
-    bot.send_message(from_user,"This Process may takes few seconds in collecting data from database")
+    bot.send_message(from_user,"这个过程可能需要几秒钟的时间来从数据库中收集数据。")
     users = {}
     i = 0
     for da in data:
@@ -936,12 +941,15 @@ def leaderboard_invite(chat_id,sec,from_user):
         users[user_id] = {'first_name':first_name,'invites':i,'username':username}
         i = 0
     sorted_participants = sorted(users.items(), key=lambda x: x[1]['invites'], reverse=True)
-    msg_text = "Requested invite leaderboad --:\n\n"
+    msg_text = "请求的邀请排行榜如下：：\n\n"
     for (user_id,data) in sorted_participants:
         i = i + 1
         msg_text += f"{i}. @{data['username']} - {data['invites']} invites\n"
         if i >= 10:
             break
+    if i == 0:
+        bot.send_message(from_user,"未找到数据。")
+        return
     bot.send_message(from_user ,msg_text , parse_mode='HTML')
 
 def invite_time(message,chat_id):
@@ -954,7 +962,7 @@ def invite_time(message,chat_id):
     try:
         duration = int(duration[:-1]) * duration_units[duration[-1]]
     except Exception:
-        bot.send_message(message.from_user.id,"Error occur when convering time\ntry again use format: 1d,1h,1m,1s")
+        bot.send_message(message.from_user.id,"转换时间时出现错误，请再试一次，使用格式：1d，1h，1m，1s。")
         bot.register_next_step_handler(message,invite_time,chat_id)
         return
     leaderboard_invite(chat_id,duration,message.from_user.id)
