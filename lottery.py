@@ -426,7 +426,7 @@ def callback_handler(call):
 成员可使用 /invites 命令检查他们的邀请。
 成员可使用 /topinvites 命令检查群组的前10名邀请。</i>
 
-<b>统计信息</b>"""
+<b>统计信息</b>\n"""
         data = owners.find_one({'chat_id':chat_id})
         add_count = data.get('add_count',0)
         invite_count = data.get('invite_count',0)
