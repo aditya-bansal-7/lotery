@@ -426,11 +426,8 @@ def callback_handler(call):
         add_count = data.get('add_count',0)
         invite_count = data.get('invite_count',0)
         num_count = data.get('user_count',0)
+        link_count = data.get('link_count',0)
         
-        if 'link_count' in data:
-            link_count = data['link_count']
-        else:
-            link_count = 0
         msg_text += f"<i>Total number of invitations = {num_count} ({add_count} by add button , {invite_count} by invite link) </i>\n"
         msg_text += f"<i>Total number of links generated =</i> {link_count}\n\n"
         
