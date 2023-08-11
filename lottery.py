@@ -1006,6 +1006,8 @@ def time_check():
             for giveaway in giveawayes:
                 if 'is_done' in giveaway:
                     continue
+                if 'duration' not in giveaway:
+                    continue
                 giveaway["duration"] -= 10
                 i += 1
                 time_left = giveaway["duration"]
