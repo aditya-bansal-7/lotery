@@ -8,6 +8,8 @@ import threading
 import random
 import asyncio
 from datetime import datetime , timedelta
+import csv
+
 
 bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
@@ -495,7 +497,67 @@ def callback_handler(call):
         bot.send_message(call.from_user.id,"1天，1小时，1分钟，1秒 的时间格式为：1d，1h，1m，1s。",reply_markup=markup)
         bot.register_next_step_handler(call.message,invite_time,chat_id)
     elif call.data.startswith(("export_invite:")):
-        bot.answer_callback_query(call.id,"Working on it")
+        chat_id = int(call.data.split(":")[1])
+        bot.send_message(call.from_user.id,"This Process may takes few seconds in collecting data from database")
+        
+        invi_data = owners.find_one({'chat_id':chat_id})
+        if invi_data:
+            link_count = invi_data.get('link_count',0)
+            user_count = invi_data.get('user_count',0)
+            
+            data = invites.find({'chat_id': chat_id, 'first_name': {'$exists': True}}).sort('regular_count',-1)
+
+            selected_fields = ['first_name', 'username', 'regular_count', 'user_id','invite_link']
+
+            # Create a BytesIO object to store CSV content
+            with open('invitation_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
+                csv_writer = csv.writer(csvfile)
+                csv_writer.writerow(['Total Link Count', 'Total Users Count'])
+                csv_writer.writerow([link_count, user_count])
+                csv_dict_writer = csv.DictWriter(csvfile, fieldnames=selected_fields)
+                csv_dict_writer.writeheader()
+                for row in data:
+                    selected_row = {field: row.get(field, '') for field in selected_fields}
+                    csv_dict_writer.writerow(selected_row)
+            with open('invitation_data.csv', 'rb') as file:
+                bot.send_document(call.message.chat.id, file)
+            
+            data = invites.find({'chat_id': chat_id, 'first_name': {'$exists': True}}).sort('regular_count',-1)
+
+            data2 = []
+            empty_row = {'sr no.': '', 'invited_by': '', 'first_name': '', 'username': '', 'join_time': '','message count':''}
+            last_invite_by = ""
+            i = 1
+            for daa in data:
+                for user_id, user_data in daa['users'].items():
+                    dat = messages.find_one({'chat_id':chat_id,'user_id':int(user_id)})
+                    if dat:
+                        message_count = dat['message_count']
+                    else:
+                        message_count = 0
+                    invited_by = daa['username']
+                    first_name = user_data['first_name']
+                    username = user_data['username']
+                    join_time = user_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    userdata = {'sr no.':i,'invited_by': invited_by, 'first_name': first_name, 'username': username, 'join_time': join_time,'message count':message_count}
+                    data2.append(userdata)
+                    i += 1
+                i = 1
+            selected_fields = ['sr no.','invited_by','first_name', 'username', 'join_time','message count']
+            with open('invitees_data.csv', 'w', newline='', encoding='utf-8') as csvfile:
+                csv_dict_writer = csv.DictWriter(csvfile, fieldnames=selected_fields)
+                csv_dict_writer.writeheader()
+                for row in data2:
+                    if last_invite_by != row['invited_by']:
+                        csv_dict_writer.writerow(empty_row)
+                        last_invite_by = row['invited_by']
+                    selected_row = {field: row.get(field, '') for field in selected_fields}
+                    csv_dict_writer.writerow(selected_row)
+                    
+
+            with open('invitees_data.csv', 'rb') as file:
+                bot.send_document(call.message.chat.id, file)
     elif call.data.startswith(("erase_invite:")):
         chat_id = int(call.data.split(":")[1])
         msg_text = """🚨🚨 请注意，所有邀请链接和邀请数据将很快被清除，此操作无法恢复，是否继续？"""
