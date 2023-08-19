@@ -37,6 +37,8 @@ messages = db['messages']
 
 dices = db['dices']
 
+kk = db['kk']
+
 app = "not_set"
 
 
