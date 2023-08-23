@@ -683,6 +683,8 @@ def callback_handler(call):
         bot.answer_callback_query(call.id,"working on it")
     elif call.data.startswith(("quiz:")):
         create_quiz(call.message,call.from_user.id)
+    elif call.data == "ended":
+        bot.answer_callback_query(call.id,"This quiz question already ended. ")
     elif call.data.startswith(("quiz_answer:")):
         try:
             chat_id = call.message.chat.id
@@ -823,6 +825,8 @@ def create_quiz4(message,msg2,quiz_id):
             upsert=True
         )
         ques = data['questions']
+        markup2 = types.ReplyKeyboardRemove()
+        bot.send_message(message.chat.id,"👍 Quiz created.",reply_markup=markup2)
         bot.send_message(message.chat.id,f"<b>{title}</b>\n❓{len(ques)} ▪️ ⏱ {duration} sec",reply_markup=markup,parse_mode='HTML')
 
 def time_check2():
@@ -901,6 +905,8 @@ def time_check2():
                                 print(data['users'])
                             break
             except Exception as e:
+                time_thread = threading.Thread(target=time_check2)
+                time_thread.start()
                 print(e)
                 pass
             if i == 1:
