@@ -39,8 +39,11 @@ dices = db['dices']
 
 kk = db['kk']
 
-app = "not_set"
+quizs = db['quizs']
 
+active_quizs = {}
+
+emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 
 def add_inline_markup(chat_id):
@@ -49,8 +52,10 @@ def add_inline_markup(chat_id):
     button2 = InlineKeyboardButton(text="🎉Giveaways",callback_data=f"giveaways:{chat_id}")
     button3 = InlineKeyboardButton(text="👥Invite",callback_data=f"invite:{chat_id}")
     button4 = InlineKeyboardButton(text="🎰 Dice Giveaway",callback_data=f"dice_giveaway:{chat_id}")
+    button5 = InlineKeyboardButton(text="Quiz ❓",callback_data=f"quiz:{chat_id}")
     markup.add(button1,button3)
     markup.add(button2,button4)
+    markup.add(button5)
     return markup
 
 
@@ -676,6 +681,255 @@ def callback_handler(call):
         #             amount = da[amount]
     elif call.data.startswith(("data_dice:")):
         bot.answer_callback_query(call.id,"working on it")
+    elif call.data.startswith(("quiz:")):
+        create_quiz(call.message,call.from_user.id)
+    elif call.data.startswith(("quiz_answer:")):
+        try:
+            chat_id = call.message.chat.id
+            call_ans = call.data.split(":")[1]
+            correct_ans = active_quizs[str(chat_id)]['current_ques']['correct_option']
+            if str(call.from_user.id)in active_quizs[str(chat_id)]['joiners']:
+                bot.answer_callback_query(call.id,"Your answer already submited")
+                return
+            data = active_quizs[str(chat_id)]
+            if call_ans == correct_ans:
+                time_gap = data['time_gap']
+                current_time = datetime.now()
+                last_time = data['last_time']
+                sc = current_time - last_time
+                sec1 = timedelta(seconds=1)
+                sco = 500 + time_gap - int(sc/sec1)
+                if 'users' in data:
+                    if str(call.from_user.id) in data['users'].keys():
+                        score = data['users'][str(call.from_user.id)]['score']
+                        data['users'][str(call.from_user.id)]['score'] = score + sco
+                    else:
+                        data['users'][str(call.from_user.id)] = {'score':sco,'username':call.from_user.username,'first_name':call.from_user.first_name}
+                else :
+                    active_quizs[str(chat_id)]['users'] = {}
+                    data['users'][str(call.from_user.id)] = {'score': sco ,'username':call.from_user.username,'first_name':call.from_user.first_name}
+            bot.answer_callback_query(call.id,"Answer sucessfully submited ")
+            active_quizs[str(chat_id)]['joiners'].append(str(call.from_user.id))
+        except Exception as e:
+            print(e)
+            bot.answer_callback_query(call.id,'Intreaction Failed')
+
+def create_quiz(message,user_id):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("🚫Cancle")
+    markup.add(button1)
+    msg2 = bot.send_message(user_id,"Send me the title of your quiz (e.g., ‘Quiz 1’)",reply_markup=markup)
+    bot.register_next_step_handler(message,create_quiz2,user_id,msg2)
+
+def create_quiz2(message,user_id,msg2):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("🚫Cancle")
+    button2 = KeyboardButton("Create a question",request_poll=telebot.types.KeyboardButtonPollType(type="quiz"))
+    markup.add(button2,button1)
+    if message.text == "🚫Cancle":
+        bot.delete_message(msg2.chat.id, msg2.id)
+        bot.delete_message(message.chat.id, message.id)
+        return
+    quiz_id = str((uuid.uuid4()))
+    document = {
+        'user_id':message.from_user.id,
+        'quiz_id':quiz_id,
+        'title':message.text,
+        'questions':{}
+    }
+    quizs.insert_one(document)
+    bot.delete_message(msg2.chat.id, msg2.id)
+    msg2 = bot.send_message(user_id,"Send Me a quiz ",reply_markup=markup)
+    bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
+
+def create_quiz3(message,msg2,quiz_id):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+    button1 = KeyboardButton("☑️Done")
+    button2 = KeyboardButton("Create a question",request_poll=telebot.types.KeyboardButtonPollType(type="quiz"))
+    markup.add(button2,button1)
+    if message.text == "🚫Cancle":
+        bot.delete_message(msg2.chat.id, msg2.id)
+        bot.delete_message(message.chat.id, message.id)
+        return
+    elif message.text == "☑️Done":
+        markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True,row_width=3)
+        button1 = KeyboardButton("10s")
+        button2 = KeyboardButton("20s")
+        button3 = KeyboardButton("30s")
+        button4 = KeyboardButton("1m")
+        button5 = KeyboardButton("2m")
+        button6 = KeyboardButton("3m")
+        button7 = KeyboardButton("5m")
+        button8 = KeyboardButton("10m")
+        button9 = KeyboardButton("30m")
+        markup.add(button1,button2,button3)
+        markup.add(button4,button5,button6)
+        markup.add(button7,button8,button9)
+        bot.delete_message(msg2.chat.id, msg2.id)
+        bot.delete_message(message.chat.id, message.id)
+        msg2 = bot.send_message(message.chat.id,"Please set a time limit for questions. In groups, the bot will send the next question as soon as this time is up.\n\nWe recommend using longer timers only if your quiz involves complex problems (like math, etc.). For most trivia-like quizzes, 10-30 seconds are more than enough.\n\nLike 10s,20s,30s make sure that time will be round off 10s",reply_markup=markup)
+        bot.register_next_step_handler(message,create_quiz4,msg2,quiz_id)
+        return
+    if message.content_type == 'poll':
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            bot.delete_message(msg2.chat.id, msg2.id)
+            question = message.poll.question
+            options = []
+            for option in message.poll.options:
+                options.append(option.text)
+            correct_index = message.poll.correct_option_id
+            correct_answer = options[correct_index]
+            daa = data['questions']
+            title = data['title']
+            daa[question] = {'options':options,'correct_option':correct_answer}
+            msg2 = bot.send_message(message.chat.id,f"Now your quiz '{title}' have {len(daa)} questions.\n\nNow send the next question\n\nWhen done, simply send ☑️Done to finish creating the quiz.",reply_markup=markup)
+            quizs.update_one({'quiz_id':quiz_id},{'$set':{'questions':daa}})
+            bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
+            return
+    else:
+        bot.send_message(message.chat.id,"Please send a question . Using create a option button")
+        bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
+
+def create_quiz4(message,msg2,quiz_id):
+    duration = message.text
+    try:
+        duration = int(duration[:-1]) * {"d": 86400, "h": 3600, "m": 60, "s": 1}[duration[-1]]
+    except Exception as e:
+        bot.delete_message(message.chat.id, message.id)
+        bot.send_message(message.chat.id,"Error : Time limit should be in the format 1d, 1h, 1m, or 1s.")
+        bot.register_next_step_handler(message,create_quiz4,msg2,quiz_id)
+        return
+    data = quizs.find_one({'quiz_id':quiz_id})
+    if data:
+        title = data['title']
+        quizs.update_one({'quiz_id':quiz_id},{'$set':{'time_limit':duration}})
+        markup = InlineKeyboardMarkup()
+        button = InlineKeyboardButton("Share quiz in Group",url=f"https://t.me/Tic4techgamebot?startgroup=quiz:{quiz_id}")
+        button1 = InlineKeyboardButton('Share quiz',switch_inline_query=f"{title}")
+        markup.add(button1)
+        markup.add(button)
+        id = str((uuid.uuid4()))
+        result = {
+            "id": id,
+            "title": title,
+            "input_message_content": {
+                "message_text": f"/quies {quiz_id}"
+            }
+        }
+        queries.update_one(
+            {'user_id': message.from_user.id},
+            {'$addToSet': {'results': result}},
+            upsert=True
+        )
+        ques = data['questions']
+        bot.send_message(message.chat.id,f"<b>{title}</b>\n❓{len(ques)} ▪️ ⏱ {duration} sec",reply_markup=markup,parse_mode='HTML')
+
+def time_check2():
+    with lock:
+        time.sleep(10)
+        while True:
+            i= 1
+            try:
+                for chat_id , data in active_quizs.items():
+                    current_time = datetime.now()
+                    last_time = data['last_time']
+                    time_gap = timedelta(seconds=data['time_gap'])
+                    i = i + 1
+                    if last_time + time_gap <= current_time:
+                        ques = data['questions']
+                        if data['edit_msg']:
+                            msg_id = data['msg_id']
+                            markup = InlineKeyboardMarkup()
+                            button = InlineKeyboardButton("Ended",callback_data="ended")
+                            markup.add(button)
+                            bot.edit_message_reply_markup(chat_id,msg_id,reply_markup=markup)
+                            data['edit_msg'] = False
+                        if data['send_leader']:
+                            if 'users' in data:
+                                msg_txt = "Top 10 Quiz Users\n\n"
+                                sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
+                                print(sorted_participant,"\n",data['users'])
+                                for i, (user_id, data3) in enumerate(sorted_participant):
+                                    if i == 10 :
+                                        break
+                                    username = data3['username']
+                                    if username is None:
+                                        username = data3['first_name']
+                                    score = data3['score']
+                                    msg_txt += f"{username} - {score} points\n"
+                                bot.send_message(chat_id,msg_txt)
+                                pass
+                            else:
+                                bot.send_message(chat_id,"No one participate yet\n\nQuiz will continue in 10 sec")
+                            #bot_send_top_10
+                            data['send_leader'] = False
+                            continue
+                        data['last_time'] = current_time
+                        if len(ques) == 0:
+                            del active_quizs[str(chat_id)]
+                            continue
+                        for q ,data2 in ques.items():
+                            total = data['total_ques']
+                            if 'done_ques' in data:
+                                done = data['done_ques']
+                            else:
+                                done = 1
+                            data['current_ques'] = data2
+                            del active_quizs[str(chat_id)]['questions'][q]
+                            msg_text = f"<b>[{done}/{total}] {q} </b>\n\n"
+                            active_quizs[str(chat_id)]['done_ques'] = done + 1
+                            buttons = []
+                            but = []
+                            for start , option in enumerate(data2['options'],start=1):
+                                if start == 6:
+                                    buttons.append(but)
+                                    but = []
+                                emoji = emojis[start - 1]
+                                msg_text += f"{emoji} {option}\n"
+                                button1 = InlineKeyboardButton(f"{emoji}",callback_data=f"quiz_answer:{option}")
+                                but.append(button1)
+                            buttons.append(but)
+                            markup = InlineKeyboardMarkup(buttons,row_width=5) 
+                            msg = bot.send_message(chat_id,msg_text,reply_markup=markup,parse_mode='HTML')
+                            data['edit_msg'] = True
+                            data['send_leader'] = True
+                            data['msg_id'] = msg.id
+                            active_quizs[str(chat_id)]['joiners'] = []
+                            if 'users' in data:
+                                #bot send leaderboard
+                                print(data['users'])
+                            break
+            except Exception as e:
+                print(e)
+                pass
+            if i == 1:
+                return False
+            time.sleep(10)
+
+
+def start_quiz(quiz_id,chat_id,msg_id):
+    
+    data = quizs.find_one({'quiz_id':quiz_id})
+    if data:
+        questions = data['questions']
+        time_gap = data['time_limit']
+        current_time = datetime.now() - timedelta(seconds=time_gap)
+        length = len(questions)
+        active_quizs[str(chat_id)] = {'questions':questions,'time_gap':time_gap,'last_time':current_time,'quiz_id':quiz_id,'total_ques':length,
+                                      'edit_msg':False,'send_leader':False}
+        msg_text = f"🏁 Get Ready For Quiz '{data['title']}'\n\n❓{len(questions)} questions\n⏱{time_gap} seconds per question."
+        msg_text+=f"\n🔹A correct answer awards 500-{500 + time_gap} points."
+        bot.send_message(chat_id,msg_text)
+        try:
+            if msg_id:
+                bot.delete_message(chat_id,msg_id)
+        except Exception:
+            pass
+        time_thread = threading.Thread(target=time_check2)
+        time_thread.start()
+    else:
+        bot.send_message(chat_id,"Quiz not found")
 
 
 
@@ -1096,6 +1350,17 @@ def time_check():
 time_thread = threading.Thread(target=time_check)
 time_thread.start()
 
+
+@bot.message_handler(commands=['quiz'])
+def quiz_handler(message):
+    create_quiz(message,message.from_user.id)
+
+@bot.message_handler(commands=['quies'])
+def starts_handler(message):
+    if message.text == "/quies":
+        return
+    id = message.text.split(" ")[1]
+    start_quiz(id,message.chat.id,message.id)
 
 @bot.message_handler(commands=['giveaway'])
 def giveaway_handler(message):
