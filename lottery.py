@@ -911,7 +911,7 @@ def time_check2():
                             if 'users' in data:
                                 msg_txt = "<b>Leaderboard</b>\n\n"
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
-                                if data['total_ques'] == data['done_ques']:
+                                if int(data['total_ques']) == int(data['done_ques']):
                                     msg_txt = "<b>Final Leaderboard</b>\n\n"
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
                                         if j > 20:
