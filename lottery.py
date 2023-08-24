@@ -714,7 +714,41 @@ def callback_handler(call):
             print(e)
             bot.answer_callback_query(call.id,'Intreaction Failed')
             pass
-
+    elif call.data.startswith(("edit_quiz:")):
+        quiz_id = call.data.split(":")[1]
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            bot.answer_callback_query(call.id,"Edit your quiz")
+            markup = InlineKeyboardMarkup()
+            quiz_id = data['quiz_id']
+            title = data['title']
+            time_left = data.get('time_limit',"Not Set")
+            questions = data.get('questions',{})
+            button = InlineKeyboardButton("Add More Questions",callback_data=f"add_quiz:{quiz_id}")
+            button1 = InlineKeyboardButton("Edit Question",callback_data=f"edit_quiz:{quiz_id}")
+            button2 = InlineKeyboardButton("Delete Question",callback_data=f"delete_quiz:{quiz_id}")
+            button3 = InlineKeyboardButton("Edit time limit",callback_data=f"time_quiz:{quiz_id}")
+            markup.add(button,button1)
+            markup.add(button2,button3)
+            msg_txt = f"{title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec"
+            bot.send_message(call.from_user.id,msg_txt,reply_markup=markup)
+    elif call.data.startswith(("add_quiz:")):
+        quiz_id = call.data.split(":")[1]
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            bot.answer_callback_query(call.id,"Send me a question")
+            markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
+            button1 = KeyboardButton("🚫Cancle")
+            button2 = KeyboardButton("Create a question",request_poll=telebot.types.KeyboardButtonPollType(type="quiz"))
+            markup.add(button2,button1)
+            msg2 = bot.send_message(call.from_user.id,"Send Me a question ",reply_markup=markup)
+            bot.register_next_step_handler(call.message,create_quiz3,msg2,quiz_id)
+    elif call.data.startswith(("edit_quiz:")):
+        bot.answer_callback_query(call.id,"working on it")
+    elif call.data.startswith(("delete_quiz:")):
+        bot.answer_callback_query(call.id,"working on it")
+    elif call.data.startswith(("time_quiz:")):
+        bot.answer_callback_query(call.id,"working on it")
 
 def create_quiz(message,user_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
@@ -1383,6 +1417,26 @@ def starts_handler(message):
         return
     id = message.text.split(" ")[1]
     start_quiz(id,message.chat.id,message.id)
+
+
+@bot.message_handler(commands=['quiz_all','quizall'])
+def edit_quiz(message):
+    user_id = message.from_user.id
+    data = quizs.find({'user_id':user_id})
+    if data:
+        msg_txt = "Your all quizs\n\n"
+        i = 1
+        markup = InlineKeyboardMarkup()
+        for dat in data:
+            quiz_id = dat['quiz_id']
+            title = dat['title']
+            time_left = dat.get('time_limit',"Not Set")
+            questions = dat.get('questions',{})
+            button = InlineKeyboardButton(title,callback_data=f"edit_quiz:{quiz_id}")
+            markup.add(button)
+            msg_txt += f"{i}. {title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec\n\n"
+            i = i + 1
+    bot.send_message(message.chat.id,msg_txt,reply_markup=markup)
 
 @bot.message_handler(commands=['giveaway'])
 def giveaway_handler(message):
