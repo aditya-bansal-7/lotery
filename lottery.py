@@ -713,6 +713,8 @@ def callback_handler(call):
         except Exception as e:
             print(e)
             bot.answer_callback_query(call.id,'Intreaction Failed')
+            pass
+
 
 def create_quiz(message,user_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
@@ -727,9 +729,12 @@ def create_quiz2(message,user_id,msg2):
     button2 = KeyboardButton("Create a question",request_poll=telebot.types.KeyboardButtonPollType(type="quiz"))
     markup.add(button2,button1)
     if message.text == "🚫Cancle":
-        bot.delete_message(msg2.chat.id, msg2.id)
-        bot.delete_message(message.chat.id, message.id)
-        return
+        try:
+            bot.delete_message(msg2.chat.id, msg2.id)
+            bot.delete_message(message.chat.id, message.id)
+            return
+        except Exception:
+            pass
     quiz_id = str((uuid.uuid4()))
     document = {
         'user_id':message.from_user.id,
@@ -738,7 +743,10 @@ def create_quiz2(message,user_id,msg2):
         'questions':{}
     }
     quizs.insert_one(document)
-    bot.delete_message(msg2.chat.id, msg2.id)
+    try:
+        bot.delete_message(msg2.chat.id, msg2.id)
+    except Exception:
+        pass
     msg2 = bot.send_message(user_id,"Send Me a quiz ",reply_markup=markup)
     bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
 
@@ -765,15 +773,22 @@ def create_quiz3(message,msg2,quiz_id):
         markup.add(button1,button2,button3)
         markup.add(button4,button5,button6)
         markup.add(button7,button8,button9)
-        bot.delete_message(msg2.chat.id, msg2.id)
-        bot.delete_message(message.chat.id, message.id)
+        try:
+            bot.delete_message(msg2.chat.id, msg2.id)
+            bot.delete_message(message.chat.id, message.id)
+        except Exception:
+            pass
         msg2 = bot.send_message(message.chat.id,"Please set a time limit for questions. In groups, the bot will send the next question as soon as this time is up.\n\nWe recommend using longer timers only if your quiz involves complex problems (like math, etc.). For most trivia-like quizzes, 10-30 seconds are more than enough.\n\nLike 10s,20s,30s make sure that time will be round off 10s",reply_markup=markup)
         bot.register_next_step_handler(message,create_quiz4,msg2,quiz_id)
         return
     if message.content_type == 'poll':
         data = quizs.find_one({'quiz_id':quiz_id})
         if data:
-            bot.delete_message(msg2.chat.id, msg2.id)
+            try:
+                bot.delete_message(msg2.chat.id, msg2.id)
+            except Exception:
+                pass
+
             question = message.poll.question
             options = []
             for option in message.poll.options:
@@ -796,7 +811,10 @@ def create_quiz4(message,msg2,quiz_id):
     try:
         duration = int(duration[:-1]) * {"d": 86400, "h": 3600, "m": 60, "s": 1}[duration[-1]]
     except Exception as e:
-        bot.delete_message(message.chat.id, message.id)
+        try:
+            bot.delete_message(message.chat.id, message.id)
+        except Exception:
+            pass
         bot.send_message(message.chat.id,"Error : Time limit should be in the format 1d, 1h, 1m, or 1s.")
         bot.register_next_step_handler(message,create_quiz4,msg2,quiz_id)
         return
@@ -852,14 +870,12 @@ def time_check2():
                                 msg_txt = "Top 10 Quiz Users\n\n"
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
                                 print(sorted_participant,"\n",data['users'])
-                                for i, (user_id, data3) in enumerate(sorted_participant):
-                                    if i == 10 :
-                                        break
+                                for (user_id,data3) in sorted_participant:
                                     username = data3['username']
                                     if username is None:
                                         username = data3['first_name']
                                     score = data3['score']
-                                    msg_txt += f"{username} - {score} points\n"
+                                    msg_txt += f"{username} - {score}"
                                 bot.send_message(chat_id,msg_txt)
                                 pass
                             else:
@@ -872,6 +888,7 @@ def time_check2():
                             del active_quizs[str(chat_id)]
                             continue
                         for q ,data2 in ques.items():
+                            correct_answer = data2['correct_option']
                             total = data['total_ques']
                             if 'done_ques' in data:
                                 done = data['done_ques']
@@ -889,7 +906,9 @@ def time_check2():
                                     but = []
                                 emoji = emojis[start - 1]
                                 msg_text += f"{emoji} {option}\n"
-                                button1 = InlineKeyboardButton(f"{emoji}",callback_data=f"quiz_answer:{option}")
+                                if correct_answer == option:
+                                    data2['correct_option'] = str(start)
+                                button1 = InlineKeyboardButton(f"{emoji}",callback_data=f"quiz_answer:{start}")
                                 but.append(button1)
                             buttons.append(but)
                             markup = InlineKeyboardMarkup(buttons,row_width=5) 
@@ -902,7 +921,7 @@ def time_check2():
                                 #bot send leaderboard
                                 print(data['users'])
                             break
-            except Exception as e:
+            except Exception as e:      
                 time_thread = threading.Thread(target=time_check2)
                 time_thread.start()
                 print(e)
@@ -910,7 +929,6 @@ def time_check2():
             if i == 1:
                 return False
             time.sleep(10)
-
 
 def start_quiz(quiz_id,chat_id,msg_id):
     
