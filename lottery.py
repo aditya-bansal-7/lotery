@@ -37,8 +37,6 @@ messages = db['messages']
 
 dices = db['dices']
 
-kk = db['kk']
-
 quizs = db['quizs']
 
 active_quizs = {}
