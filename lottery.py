@@ -687,7 +687,8 @@ def callback_handler(call):
         try:
             chat_id = call.message.chat.id
             call_ans = call.data.split(":")[1]
-            correct_ans = active_quizs[str(chat_id)]['current_ques']['correct_option']
+            q , correct_an = active_quizs[str(chat_id)]['current_ques']
+            correct_ans = correct_an['correct_option2']
             if str(call.from_user.id)in active_quizs[str(chat_id)]['joiners']:
                 bot.answer_callback_query(call.id,"Your answer already submited")
                 return
@@ -881,6 +882,7 @@ def create_quiz4(message,msg2,quiz_id):
         bot.send_message(message.chat.id,"👍 Quiz created.",reply_markup=markup2)
         bot.send_message(message.chat.id,f"<b>{title}</b>\n❓{len(ques)} ▪️ ⏱ {duration} sec",reply_markup=markup,parse_mode='HTML')
 
+
 def time_check2():
     with lock:
         time.sleep(10)
@@ -901,19 +903,36 @@ def time_check2():
                             markup.add(button)
                             bot.edit_message_reply_markup(chat_id,msg_id,reply_markup=markup)
                             data['edit_msg'] = False
+                            ques2 = data['current_ques']
+                            que , data4 = ques2
+                            correct_answer2 = data4['correct_option']
+                            bot.send_message(chat_id,f"<b>{que}</b>\nTime's up!\n\ncorrect ans - {correct_answer2}",parse_mode='HTML')
                         if data['send_leader']:
                             if 'users' in data:
-                                msg_txt = "Top 10 Quiz Users\n\n"
+                                msg_txt = "<b>Leaderboard</b>\n\n"
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
-                                print(sorted_participant,"\n",data['users'])
-                                for (user_id,data3) in sorted_participant:
-                                    username = data3['username']
-                                    if username is None:
-                                        username = data3['first_name']
-                                    score = data3['score']
-                                    msg_txt += f"{username} - {score}"
-                                bot.send_message(chat_id,msg_txt)
-                                pass
+                                if data['total_ques'] == data['done_ques']:
+                                    msg_txt = "<b>Final Leaderboard</b>\n\n"
+                                    for i, (user_id, data3) in enumerate(sorted_participant,start=1):
+                                        if i > 20:
+                                            bot.send_message(chat_id,msg_txt,parse_mode='HTML')
+                                            msg_txt = "----------------\n"
+                                        username = data3['username']
+                                        if username is None:
+                                            username = data3['first_name']
+                                        score = data3['score']
+                                        msg_txt += f"#{i}. {username} - {score}\n"
+                                else:
+                                    for i, (user_id, data3) in enumerate(sorted_participant,start=1):
+                                        if i > 10:
+                                            return
+                                        username = data3['username']
+                                        if username is None:
+                                            username = data3['first_name']
+                                        score = data3['score']
+                                        msg_txt += f"{i}. {username} - {score}\n"
+                                    bot.send_message(chat_id,msg_txt,parse_mode='HTML')
+                                    pass
                             else:
                                 bot.send_message(chat_id,"No one participate yet\n\nQuiz will continue in 10 sec")
                             #bot_send_top_10
@@ -930,7 +949,7 @@ def time_check2():
                                 done = data['done_ques']
                             else:
                                 done = 1
-                            data['current_ques'] = data2
+                            data['current_ques'] = q , data2
                             del active_quizs[str(chat_id)]['questions'][q]
                             msg_text = f"<b>[{done}/{total}] {q} </b>\n\n"
                             active_quizs[str(chat_id)]['done_ques'] = done + 1
@@ -943,7 +962,7 @@ def time_check2():
                                 emoji = emojis[start - 1]
                                 msg_text += f"{emoji} {option}\n"
                                 if correct_answer == option:
-                                    data2['correct_option'] = str(start)
+                                    data2['correct_option2'] = str(start)
                                 button1 = InlineKeyboardButton(f"{emoji}",callback_data=f"quiz_answer:{start}")
                                 but.append(button1)
                             buttons.append(but)
