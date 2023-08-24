@@ -728,8 +728,10 @@ def callback_handler(call):
             button1 = InlineKeyboardButton("Edit Question",callback_data=f"edit_quiz:{quiz_id}")
             button2 = InlineKeyboardButton("Delete Question",callback_data=f"delete_quiz:{quiz_id}")
             button3 = InlineKeyboardButton("Edit time limit",callback_data=f"time_quiz:{quiz_id}")
+            button4 = InlineKeyboardButton('Share quiz',switch_inline_query=f"{title}")
             markup.add(button,button1)
             markup.add(button2,button3)
+            markup.add(button4)
             msg_txt = f"{title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec"
             bot.send_message(call.from_user.id,msg_txt,reply_markup=markup)
     elif call.data.startswith(("add_quiz:")):
