@@ -972,9 +972,6 @@ def time_check2():
                             data['send_leader'] = True
                             data['msg_id'] = msg.id
                             active_quizs[str(chat_id)]['joiners'] = []
-                            if 'users' in data:
-                                #bot send leaderboard
-                                print(data['users'])
                             break
             except Exception as e:      
                 time_thread = threading.Thread(target=time_check2)
