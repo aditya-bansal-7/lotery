@@ -913,29 +913,28 @@ def time_check2():
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
                                 if data['total_ques'] == data['done_ques']:
                                     msg_txt = "<b>Final Leaderboard</b>\n\n"
-                                    for i, (user_id, data3) in enumerate(sorted_participant,start=1):
-                                        if i > 20:
+                                    for j, (user_id, data3) in enumerate(sorted_participant,start=1):
+                                        if j > 20:
                                             bot.send_message(chat_id,msg_txt,parse_mode='HTML')
                                             msg_txt = "----------------\n"
                                         username = data3['username']
                                         if username is None:
                                             username = data3['first_name']
                                         score = data3['score']
-                                        msg_txt += f"#{i}. {username} - {score}\n"
+                                        msg_txt += f"#{j}. {username} - {score}\n"
                                 else:
-                                    for i, (user_id, data3) in enumerate(sorted_participant,start=1):
-                                        if i > 10:
+                                    for j, (user_id, data3) in enumerate(sorted_participant,start=1):
+                                        if j > 10:
                                             return
                                         username = data3['username']
                                         if username is None:
                                             username = data3['first_name']
                                         score = data3['score']
-                                        msg_txt += f"{i}. {username} - {score}\n"
+                                        msg_txt += f"#{j}. {username} - {score}\n"
                                     bot.send_message(chat_id,msg_txt,parse_mode='HTML')
                                     pass
                             else:
                                 bot.send_message(chat_id,"No one participate yet\n\nQuiz will continue in 10 sec")
-                            #bot_send_top_10
                             data['send_leader'] = False
                             continue
                         data['last_time'] = current_time
