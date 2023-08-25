@@ -926,7 +926,7 @@ def time_check2():
                                 else:
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
                                         if j > 10:
-                                            return
+                                            break
                                         username = data3['username']
                                         if username is None:
                                             username = data3['first_name']
