@@ -911,7 +911,7 @@ def time_check2():
                             if 'users' in data:
                                 msg_txt = "<b>Leaderboard</b>\n\n"
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
-                                if int(data['total_ques']) == int(data['done_ques']):
+                                if int(data['total_ques']) == (int(data['done_ques'])-1):
                                     msg_txt = "<b>Final Leaderboard</b>\n\n"
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
                                         if j > 20:
@@ -922,6 +922,7 @@ def time_check2():
                                             username = data3['first_name']
                                         score = data3['score']
                                         msg_txt += f"#{j}. {username} - {score}\n"
+                                    bot.send_message(chat_id,msg_txt,parse_mode='HTML')
                                 else:
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
                                         if j > 10:
