@@ -913,15 +913,28 @@ def time_check2():
                                 sorted_participant = sorted(data["users"].items(), key=lambda x: x[1]['score'], reverse=True)
                                 if int(data['total_ques']) == (int(data['done_ques'])-1):
                                     msg_txt = "<b>Final Leaderboard</b>\n\n"
+                                    end = 20
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
-                                        if j > 20:
+                                        if j == end:
+                                            end += 20
                                             bot.send_message(chat_id,msg_txt,parse_mode='HTML')
                                             msg_txt = "----------------\n"
                                         username = data3['username']
                                         if username is None:
                                             username = data3['first_name']
                                         score = data3['score']
-                                        msg_txt += f"#{j}. {username} - {score}\n"
+                                        msg_txt += f"#{j}. {username} - {score}"
+                                        if j <= 10:
+                                            data10 = roles.find_one({'chat_id': chat_id, 'user_id': user_id,'roles': "top-10"})
+                                            if data10 is None:
+                                                roles.update_one({'chat_id': chat_id, 'user_id': user_id},
+                                                    {'$addToSet': {'roles': "top-10"},
+                                                    '$set': {'first_name': username}}, upsert=True)
+                                                roles.update_one({'chat_id':chat_id,'role_name':"top-10"},
+                                                    {'$inc':{'count':1}},upsert=True)
+                                            msg_txt += "- 'top-10'\n"
+                                        else:
+                                            msg_txt += "\n"
                                     bot.send_message(chat_id,msg_txt,parse_mode='HTML')
                                 else:
                                     for j, (user_id, data3) in enumerate(sorted_participant,start=1):
