@@ -927,7 +927,7 @@ def time_check2():
                                         if j <= 10:
                                             data10 = roles.find_one({'chat_id': chat_id, 'user_id': user_id,'roles': "top-10"})
                                             if data10 is None:
-                                                roles.update_one({'chat_id': int(chat_id), 'user_id': user_id},
+                                                roles.update_one({'chat_id': int(chat_id), 'user_id': int(user_id)},
                                                     {'$addToSet': {'roles': "top-10"},
                                                     '$set': {'first_name': username}}, upsert=True)
                                                 roles.update_one({'chat_id':int(chat_id),'role_name':"top-10"},
