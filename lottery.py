@@ -779,22 +779,23 @@ def callback_handler(call):
         quiz_id = call.data.split(":")[1]
         data = quizs.find_one({'quiz_id':quiz_id})
         if data:
-            bot.answer_callback_query(call.id,"Edit your quiz")
             markup = InlineKeyboardMarkup()
             quiz_id = data['quiz_id']
             title = data['title']
             time_left = data.get('time_limit',"Not Set")
             questions = data.get('questions',{})
             button = InlineKeyboardButton("Add More Questions",callback_data=f"add_quiz:{quiz_id}")
-            button1 = InlineKeyboardButton("Edit Question",callback_data=f"edit_quiz:{quiz_id}")
-            button2 = InlineKeyboardButton("Delete Question",callback_data=f"delete_quiz:{quiz_id}")
+            button1 = InlineKeyboardButton("Edit Question",callback_data=f"edit_ques:{quiz_id}")
+            button2 = InlineKeyboardButton("Delete",callback_data=f"delete_quiz:{quiz_id}")
             button3 = InlineKeyboardButton("Edit time limit",callback_data=f"time_quiz:{quiz_id}")
             button4 = InlineKeyboardButton('Share quiz',switch_inline_query=f"{title}")
             markup.add(button,button1)
             markup.add(button2,button3)
             markup.add(button4)
             msg_txt = f"{title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec"
-            bot.send_message(call.from_user.id,msg_txt,reply_markup=markup)
+            bot.edit_message_text(msg_txt,call.message.chat.id,call.message.id,reply_markup=markup)
+        else:
+            bot.answer_callback_query(call.id,"Quiz Not Found")
     elif call.data.startswith(("add_quiz:")):
         quiz_id = call.data.split(":")[1]
         data = quizs.find_one({'quiz_id':quiz_id})
@@ -806,12 +807,75 @@ def callback_handler(call):
             markup.add(button2,button1)
             msg2 = bot.send_message(call.from_user.id,"Send Me a question ",reply_markup=markup)
             bot.register_next_step_handler(call.message,create_quiz3,msg2,quiz_id)
-    elif call.data.startswith(("edit_quiz:")):
+    elif call.data.startswith(("edit_ques:")):
         bot.answer_callback_query(call.id,"working on it")
     elif call.data.startswith(("delete_quiz:")):
-        bot.answer_callback_query(call.id,"working on it")
+        quiz_id = call.data.split(":")[1]
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            markup = InlineKeyboardMarkup()
+            btn = InlineKeyboardButton("Delete Quiz",callback_data=f"del_quiz:{quiz_id}")
+            btn2 = InlineKeyboardButton("Delete a Question",callback_data=f"del_ques:{quiz_id}")
+            markup.add(btn)
+            markup.add(btn2)
+            button = InlineKeyboardButton("🔙 Back",callback_data=f"edit_quiz:{quiz_id}")
+            markup.add(button)
+            bot.edit_message_reply_markup(call.message.chat.id,call.message.id,reply_markup=markup)
+        else:
+            bot.answer_callback_query(call.id,"Quiz Not Found")
+    elif call.data.startswith(("del_ques:")):
+        bot.answer_callback_query(call.id,"Working on it")
+    elif call.data.startswith(("del_quiz:")):
+        quiz_id = call.data.split(":")[1]
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            quizs.delete_one({'quiz_id':quiz_id})
+            bot.edit_message_text("Quiz Deleted !!!",call.message.chat.id,call.message.id)
+        else:
+            bot.answer_callback_query(call.id,"Quiz Not Found")
     elif call.data.startswith(("time_quiz:")):
-        bot.answer_callback_query(call.id,"working on it")
+        quiz_id = call.data.split(":")[1]
+        data = quizs.find_one({'quiz_id':quiz_id})
+        if data:
+            markup = quiz_time_keyboard()
+            bot.send_message(call.message.chat.id,"Please set a time limit for questions. In groups, the bot will send the next question as soon as this time is up.\n\nWe recommend using longer timers only if your quiz involves complex problems (like math, etc.). For most trivia-like quizzes, 10-30 seconds are more than enough.\n\nLike 10s,20s,30s make sure that time will be round off 10s",reply_markup=markup)
+            bot.register_next_step_handler(call.message,quiz_time,quiz_id)
+        else:
+            bot.answer_callback_query(call.id,"Quiz not found")
+
+def quiz_time(message,quiz_id):
+    duration = message.text
+    try:
+        duration = int(duration[:-1]) * {"d": 86400, "h": 3600, "m": 60, "s": 1}[duration[-1]]
+    except Exception as e:
+        try:
+            bot.delete_message(message.chat.id, message.id)
+        except Exception:
+            pass
+        bot.send_message(message.chat.id,"Error : Time limit should be in the format 1d, 1h, 1m, or 1s.")
+        bot.register_next_step_handler(message,quiz_time,quiz_id)
+        return
+    data = quizs.find_one({'quiz_id':quiz_id})
+    if data:
+        markup = types.ReplyKeyboardRemove()
+        quizs.update_one({'quiz_id':quiz_id},{'$set':{'time_limit':duration}})
+        bot.send_message(message.chat.id,f"New time limit is set to {duration} second .",reply_markup=markup)
+
+def quiz_time_keyboard():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True,row_width=3)
+    button1 = KeyboardButton("10s")
+    button2 = KeyboardButton("20s")
+    button3 = KeyboardButton("30s")
+    button4 = KeyboardButton("1m")
+    button5 = KeyboardButton("2m")
+    button6 = KeyboardButton("3m")
+    button7 = KeyboardButton("5m")
+    button8 = KeyboardButton("10m")
+    button9 = KeyboardButton("30m")
+    markup.add(button1,button2,button3)
+    markup.add(button4,button5,button6)
+    markup.add(button7,button8,button9)
+    return markup
 
 def create_quiz(message,user_id):
     markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
