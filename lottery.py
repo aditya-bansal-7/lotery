@@ -17,10 +17,8 @@ password = 'VeJ7EH5TK13U4IQg'
 cluster_url = 'mongodb+srv://bnslboy:' + \
     password + '@cluster0.avbmi1g.mongodb.net/'
 
-# Create a MongoDB client
 client = MongoClient(cluster_url)
 
-# Access the desired database
 db = client['main']
 
 giveaways = db['giveaways']
@@ -679,7 +677,69 @@ def callback_handler(call):
         #             amount = da[amount]
     elif call.data.startswith(("data_dice:")):
         bot.answer_callback_query(call.id,"working on it")
+    elif call.data.startswith(('next_quiz:')):
+        chat_id = int(call.data.split(":")[1])
+        i = int(call.data.split(":")[2])
+        start = 1
+        markup = InlineKeyboardMarkup()
+        is_change = False
+        user_id = call.from_user.id
+        data = quizs.find({'user_id':user_id})
+        msg_txt = "Your quizs\n\n"
+        for dat in data:
+            if i < 0:
+                break
+            if start <= i :
+                start += 1
+                continue
+            is_change = True
+            quiz_id = dat['quiz_id']
+            title = dat['title']
+            time_left = dat.get('time_limit',"Not Set")
+            questions = dat.get('questions',{})
+            button = InlineKeyboardButton(title,callback_data=f"edit_quiz:{quiz_id}")
+            markup.add(button)
+            msg_txt += f"{start}. {title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec\n\n"
+            if start == i + 3:
+                break
+            start += 1
+        button = InlineKeyboardButton("Next ▶️",callback_data=f"next_quiz:{chat_id}:{i+3}")
+        button1 = InlineKeyboardButton("◀️ Previous",callback_data=f"next_quiz:{chat_id}:{i-3}")
+        markup.add(button1,button)
+        button = InlineKeyboardButton("🔙 Back",callback_data=f"settings:{chat_id}")
+        markup.add(button)
+        if is_change:
+            bot.edit_message_text(msg_txt,call.message.chat.id,call.message.id,reply_markup=markup)
+        else:
+            bot.answer_callback_query(call.id,"No More quiz found **")
     elif call.data.startswith(("quiz:")):
+        chat_id = int(call.data.split(":")[1])
+        user_id = call.from_user.id
+        data = quizs.find({'user_id':user_id})
+        
+        msg_txt = "Your quizs\n\n"
+        i = 1
+        markup = InlineKeyboardMarkup()
+        button = InlineKeyboardButton("Create New ➕",callback_data=f"create_quiz")
+        markup.add(button)
+        if data:
+            for dat in data:
+                quiz_id = dat['quiz_id']
+                title = dat['title']
+                time_left = dat.get('time_limit',"Not Set")
+                questions = dat.get('questions',{})
+                button = InlineKeyboardButton(title,callback_data=f"edit_quiz:{quiz_id}")
+                markup.add(button)
+                msg_txt += f"{i}. {title}\n❓{len(questions)} questions ▪️ ⏱ {time_left} sec\n\n"
+                if i == 3:
+                    button = InlineKeyboardButton("Next ▶️",callback_data=f"next_quiz:{chat_id}:{i}")
+                    markup.add(button)
+                    break
+                i = i + 1
+        button = InlineKeyboardButton("🔙 Back",callback_data=f"settings:{chat_id}")
+        markup.add(button)
+        bot.edit_message_text(msg_txt,call.message.chat.id,call.message.id,reply_markup=markup)
+    elif call.data == "create_quiz":
         create_quiz(call.message,call.from_user.id)
     elif call.data == "ended":
         bot.answer_callback_query(call.id,"This quiz question already ended. ")
