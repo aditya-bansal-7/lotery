@@ -1546,7 +1546,7 @@ def time_check():
                     end_giveaway(giveaway_id)
                 if 'is_edit' in giveaway and giveaway['is_edit'] is True:
                     chat_id = giveaway['chat_id']
-                    msg_id = giveaway['message_id']
+                    msg_id = int(giveaway['message_id'])
                     num_win = len(giveaway['participants'])
                     message_text = f"加入的用户数量 - {num_win} "
                     if 'del_id' in giveaway:
