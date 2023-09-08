@@ -1533,26 +1533,30 @@ def time_check():
             i = 1
             giveawayes = giveaways.find()
             for giveaway in giveawayes:
-                if 'is_done' in giveaway:
+                try:
+                    if 'is_done' in giveaway:
+                        continue
+                    if 'duration' not in giveaway:
+                        continue
+                    giveaway["duration"] -= 10
+                    i += 1
+                    time_left = giveaway["duration"]
+                    giveaway_id = giveaway['giveaway_id']
+                    giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
+                    if time_left <= 0:
+                        end_giveaway(giveaway_id)
+                    if 'is_edit' in giveaway and giveaway['is_edit'] is True:
+                        chat_id = giveaway['chat_id']
+                        msg_id = int(giveaway['message_id'])
+                        num_win = len(giveaway['participants'])
+                        message_text = f"加入的用户数量 - {num_win} "
+                        if 'del_id' in giveaway:
+                            bot.delete_message(chat_id,giveaway['del_id'])
+                        msg = bot.send_message(chat_id,message_text,reply_to_message_id=msg_id)
+                        giveaways.update_one({'giveaway_id':giveaway_id},{'$set':{'is_edit':False,'del_id':msg.id}},upsert=True)
+                except Exception as e:
+                    print(e)
                     continue
-                if 'duration' not in giveaway:
-                    continue
-                giveaway["duration"] -= 10
-                i += 1
-                time_left = giveaway["duration"]
-                giveaway_id = giveaway['giveaway_id']
-                giveaways.update_one({'giveaway_id': giveaway_id}, {'$set': {'duration': giveaway["duration"]}}) 
-                if time_left <= 0:
-                    end_giveaway(giveaway_id)
-                if 'is_edit' in giveaway and giveaway['is_edit'] is True:
-                    chat_id = giveaway['chat_id']
-                    msg_id = int(giveaway['message_id'])
-                    num_win = len(giveaway['participants'])
-                    message_text = f"加入的用户数量 - {num_win} "
-                    if 'del_id' in giveaway:
-                        bot.delete_message(chat_id,giveaway['del_id'])
-                    msg = bot.send_message(chat_id,message_text,reply_to_message_id=msg_id)
-                    giveaways.update_one({'giveaway_id':giveaway_id},{'$set':{'is_edit':False,'del_id':msg.id}},upsert=True)
             if i == 1:
                 return False
             time.sleep(10)
