@@ -10,6 +10,7 @@ import asyncio
 from datetime import datetime , timedelta
 import csv
 
+GG = {}
 
 bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
