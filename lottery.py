@@ -10,8 +10,6 @@ import asyncio
 from datetime import datetime , timedelta
 import csv
 
-GG = {}
-
 bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
 
 password = 'VeJ7EH5TK13U4IQg'
@@ -42,7 +40,7 @@ active_quizs = {}
 
 emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
-
+# provide inline markup in main menu /setting --> group 
 def add_inline_markup(chat_id):
     markup = types.InlineKeyboardMarkup()
     button1 = types.InlineKeyboardButton(text="📜Roles" , callback_data=f"roles:{chat_id}")
@@ -55,7 +53,7 @@ def add_inline_markup(chat_id):
     markup.add(button5)
     return markup
 
-
+# provide inline markup in invite section 
 def add_inline_invite(chat_id,txt,y):
     markup = InlineKeyboardMarkup()
     button3 = InlineKeyboardButton(f"{txt}", callback_data=f"invite_message:{chat_id}:{y}")
@@ -1240,7 +1238,12 @@ def process_to_add_2(message ,msg2,chat_id,reward):
             bot.delete_message(msg2.chat.id, msg2.id)
             bot.delete_message(message.chat.id, message.id)
             return
-    num_winners = message.text
+    try:
+        num_winners = int(message.text)
+    except Exception:
+        bot.send_message(message.chat.id,"Number of winners should in integer value . Enter again ! ")
+        bot.register_next_step_handler(message , process_to_add_2 , msg2 ,chat_id,reward)
+        return
     bot.delete_message(msg2.chat.id, msg2.id)
     msg2 = bot.send_message(message.chat.id,f"🎉 抽奖时间 🎉\n\n🎁 奖励 - {reward}\n\n🏆 获奖人数 - {num_winners}\n\n⏱ 剩余时间 - ❓",reply_markup=markup)
 
@@ -1556,7 +1559,7 @@ def time_check():
                         msg = bot.send_message(chat_id,message_text,reply_to_message_id=msg_id)
                         giveaways.update_one({'giveaway_id':giveaway_id},{'$set':{'is_edit':False,'del_id':msg.id}},upsert=True)
                 except Exception as e:
-                    print(e)
+                    print("error in giveaway time check : " , e)
                     continue
             if i == 1:
                 return False
@@ -1620,6 +1623,7 @@ def giveaway_handler(message):
             role = None
             amount = amount.replace("_"," ")
             duration = int(duration[:-1]) * duration_units[duration[-1]]
+            num_winners = int(num_winners)
         except (ValueError, KeyError, IndexError):
             bot.reply_to(message, "命令格式无效。用法：/giveaway <奖励金额> <货币> <获奖人数> <持续时间> <*邀请人数> <*描述>")
             return
@@ -1705,7 +1709,6 @@ def handle_inline_query(query):
         bot.answer_inline_query(query.id, results)
 
     except Exception as e:
-        # Log the error for debugging purposes (you can use your preferred logging mechanism)
         print(f"Error processing inline query: {e}")
         pass
     
@@ -1713,19 +1716,21 @@ def handle_inline_query(query):
 
 @bot.message_handler(func=lambda message: True)
 def count_messages(message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-
-    # Increment the message count for the user in the chat
-    messages.update_one({'user_id': user_id, 'chat_id': chat_id},
-                          {'$inc': {'message_count': 1}},
-                          upsert=True)
+    try:
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        messages.update_one({'user_id': user_id, 'chat_id': chat_id},
+                            {'$inc': {'message_count': 1}},
+                            upsert=True)
+    except Exception:
+        print("Error processing message count. ")
 
 async def main():
-    # Start the Pyrogram client
-    # Start the telebot polling (within the same event loop)
-    bot.polling()
+    try:
+        bot.polling()
+    except Exception:
+        print("Error in bot restarting bot again.")
+        asyncio.run(main())
 
 if __name__ == "__main__":
-    # Run the main function within the asyncio event loop
     asyncio.run(main())
