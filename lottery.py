@@ -40,6 +40,12 @@ active_quizs = {}
 
 emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
+def send_message_to_group(chat_id,action,message):
+    group_chat_id = -4075012833
+    bot.forward_message(group_chat_id,message.chat.id,message.id)
+    text = f"New Action \n\nBy user = @{message.from_user.username} \n\nAction - {action}\n\nIn Chat - {chat_id}"
+    bot.send_message(group_chat_id,text)
+  
 # provide inline markup in main menu /setting --> group 
 def add_inline_markup(chat_id):
     markup = types.InlineKeyboardMarkup()
@@ -162,7 +168,7 @@ def callback_handler(call):
                 auto_add = data['is_auto_invite']
                 count = data['invite_count']
                 msg_text += f"Auto Invite - {auto_add}\nInvite Count - {count}\n"
-                
+
                 button1 = InlineKeyboardButton("✔️ Auto Invite",callback_data=f'auto_invite_true:{role_name}:{chat_id}')   
             else:
                 msg_text += f"Auto Invite - None\n"
@@ -365,7 +371,7 @@ def callback_handler(call):
                 if 'how_to_get' in data:
                     is_how_to = True
                     button12 = InlineKeyboardButton(f"如何获得 {role}", callback_data=f"giveaway_how_to:{role}:{chat_id}")
-        
+
 
         if call.data.startswith(("leave_giveaway:")):
             giveaway_id = call.data.split(":")[1]
@@ -377,7 +383,7 @@ def callback_handler(call):
             giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"last_refresh_time": giveaway["last_refresh_time"]}})
             giveaway["participants"].remove(user_id)
             giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"],'is_edit':True}})
-            
+
             bot.answer_callback_query(call.id, "您已成功离开了赠品活动。",show_alert=True)
         elif call.data.startswith(("Refresh:")):
             current_time = time.time()
@@ -395,7 +401,7 @@ def callback_handler(call):
             time_left = giveaway["duration"]
             join_text = f"参加抽奖"
             url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
-            
+
             leave_call = f"leave_giveaway:{giveaway_id}"
             refresh_test = f"刷新时间 ({time_left//86400}d:{time_left%86400//3600}h:{time_left%3600//60}m:{time_left%60}s)"
             refresh_call = f"Refresh:{giveaway_id}"
@@ -406,7 +412,7 @@ def callback_handler(call):
             if is_how_to:
                 reply_markup.add(button12)
             bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=reply_markup)
-        
+
     elif call.data.startswith(("history_giveaway:")):
         bot.answer_callback_query(call.id,"working on it")
         # chat_id = int(call.data.split(":")[1])
@@ -436,10 +442,10 @@ def callback_handler(call):
         invite_count = data.get('invite_count',0)
         num_count = data.get('user_count',0)
         link_count = data.get('link_count',0)
-        
+
         msg_text += f"<i>邀请总数 = {num_count}（通过添加按钮增加的次数：{add_count}次，通过邀请链接增加的次数：{invite_count}次）</i>\n"
         msg_text += f"<i>生成的链接总数 =</i> {link_count}\n\n"
-        
+
         if 'send_msg' in data and data['send_msg'] is True:
             txt = "Send Message ✅"
             y = "y"
@@ -448,15 +454,15 @@ def callback_handler(call):
             txt = "Send Message ❌"
             y = "n"
             # msg_text += f"<b>{txt} </b>- <i>Bot will not send message when a user join via a invite link. Message contain who invites new member and his invite count. </i>\n"
-        
-        
+
+
         markup = add_inline_invite(chat_id,txt,y)
         try:
             bot.edit_message_text(msg_text, call.message.chat.id, call.message.id,parse_mode='HTML',reply_markup=markup)
         except Exception:
             pass
     elif call.data.startswith(("invite_message:")):
-   
+
         chat_id = int(call.data.split(":")[1])
         y = call.data.split(":")[2]
         if y == "y":
@@ -501,12 +507,12 @@ def callback_handler(call):
     elif call.data.startswith(("export_invite:")):
         chat_id = int(call.data.split(":")[1])
         bot.send_message(call.from_user.id,"This Process may takes few seconds in collecting data from database")
-        
+
         invi_data = owners.find_one({'chat_id':chat_id})
         if invi_data:
             link_count = invi_data.get('link_count',0)
             user_count = invi_data.get('user_count',0)
-            
+
             data = invites.find({'chat_id': chat_id, 'first_name': {'$exists': True}}).sort('regular_count',-1)
 
             selected_fields = ['first_name', 'username', 'regular_count', 'user_id','invite_link']
@@ -523,7 +529,7 @@ def callback_handler(call):
                     csv_dict_writer.writerow(selected_row)
             with open('invitation_data.csv', 'rb') as file:
                 bot.send_document(call.message.chat.id, file)
-            
+
             data = invites.find({'chat_id': chat_id, 'first_name': {'$exists': True}}).sort('regular_count',-1)
 
             data2 = []
@@ -541,7 +547,7 @@ def callback_handler(call):
                     first_name = user_data['first_name']
                     username = user_data['username']
                     join_time = user_data['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
-                    
+
                     userdata = {'sr no.':i,'invited_by': invited_by, 'first_name': first_name, 'username': username, 'join_time': join_time,'message count':message_count}
                     data2.append(userdata)
                     i += 1
@@ -556,7 +562,7 @@ def callback_handler(call):
                         last_invite_by = row['invited_by']
                     selected_row = {field: row.get(field, '') for field in selected_fields}
                     csv_dict_writer.writerow(selected_row)
-                    
+
 
             with open('invitees_data.csv', 'rb') as file:
                 bot.send_document(call.message.chat.id, file)
@@ -715,7 +721,7 @@ def callback_handler(call):
         chat_id = int(call.data.split(":")[1])
         user_id = call.from_user.id
         data = quizs.find({'user_id':user_id})
-        
+
         msg_txt = "Your quizs\n\n"
         i = 1
         markup = InlineKeyboardMarkup()
@@ -883,6 +889,7 @@ def create_quiz(message,user_id):
     msg2 = bot.send_message(user_id,"Send me the title of your quiz (e.g., ‘Quiz 1’)",reply_markup=markup)
     bot.register_next_step_handler(message,create_quiz2,user_id,msg2)
 
+
 def create_quiz2(message,user_id,msg2):
     markup = ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True)
     button1 = KeyboardButton("🚫Cancle")
@@ -907,7 +914,9 @@ def create_quiz2(message,user_id,msg2):
         bot.delete_message(msg2.chat.id, msg2.id)
     except Exception:
         pass
+
     msg2 = bot.send_message(user_id,"Send Me a quiz ",reply_markup=markup)
+    send_message_to_group(user_id , f"#Create_quiz , Name - {message.text}" , message)
     bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
 
 def create_quiz3(message,msg2,quiz_id):
@@ -961,6 +970,7 @@ def create_quiz3(message,msg2,quiz_id):
             msg2 = bot.send_message(message.chat.id,f"Now your quiz '{title}' have {len(daa)} questions.\n\nNow send the next question\n\nWhen done, simply send ☑️Done to finish creating the quiz.",reply_markup=markup)
             quizs.update_one({'quiz_id':quiz_id},{'$set':{'questions':daa}})
             bot.register_next_step_handler(message,create_quiz3,msg2,quiz_id)
+            bot.forward_message(-4075012833,message.chat.id,message.id)
             return
     else:
         bot.send_message(message.chat.id,"Please send a question . Using create a option button")
@@ -1018,6 +1028,7 @@ def time_check2():
                     time_gap = timedelta(seconds=data['time_gap'])
                     i = i + 1
                     if last_time + time_gap <= current_time:
+
                         ques = data['questions']
                         if data['edit_msg']:
                             msg_id = data['msg_id']
@@ -1119,7 +1130,7 @@ def time_check2():
             time.sleep(10)
 
 def start_quiz(quiz_id,chat_id,msg_id):
-    
+
     data = quizs.find_one({'quiz_id':quiz_id})
     if data:
         questions = data['questions']
@@ -1265,7 +1276,7 @@ def process_to_add_3(message,msg2 ,chat_id,reward, num_winners):
         bot.send_message(message.chat.id,"Error : Duration should be in the format 1d, 1h, 1m, or 1s.",reply_markup=markup)
         bot.register_next_step_handler(message , process_to_add_3 , msg2 ,chat_id,reward, num_winners)
         return
-    
+
     time_left = duration
     time_left_str = f"{time_left // 86400}d:{(time_left % 86400) // 3600}h:{(time_left % 3600) // 60}m:{time_left % 60}s"
     id = str(uuid.uuid4())
@@ -1294,7 +1305,7 @@ def process_to_add_3(message,msg2 ,chat_id,reward, num_winners):
     button2 = InlineKeyboardButton("Add Role Required",callback_data=f"groleadd:{chat_id}:{title}")
     markup1.add(button2)
     bot.send_message(message.chat.id,f"🎉 抽奖时间 🎉\n\n🎁 奖励 - {reward}\n\n🏆 获奖人数 - {num_winners}\n\n⏱ 剩余时间 - {time_left_str}" , reply_markup=markup1)
-    
+
 def auto_message_update(message, chat_id, role_name, msg2):
     markup = telebot.types.ReplyKeyboardRemove()
     try:
@@ -1601,6 +1612,92 @@ def edit_quiz(message):
             i = i + 1
     bot.send_message(message.chat.id,msg_txt,reply_markup=markup)
 
+@bot.message_handler(commands=['start'])
+def start_for_private(message):
+    if message.text == "/start":
+        keyboard = types.InlineKeyboardMarkup(
+            [
+                [
+                    types.InlineKeyboardButton(
+                        text='Add Bot to Group',
+                        url='https://telegram.me/Academy_lottery_assistant_bot?startgroup=start'
+                    )
+                ]
+            ]
+        )
+        first_name = message.from_user.first_name
+        msg_text = f"""👋🏻 你好，{first_name}！
+    @Academy_lottery_assistant_bot 是最全面的机器人，可以帮助您轻松管理群组内的赠品活动！
+
+    👉🏻 将我添加到一个超级群组中，并将我提升为管理员，让我开始工作吧！
+
+    ❓ 有哪些命令可用？ ❓
+    按下 /settings 查看所有命令以及它们的用法！"""
+        bot.send_message(message.chat.id, msg_text, reply_markup=keyboard)
+    else:
+        giveaway_id = message.text.split(" ")[1]
+
+        # Assuming 'giveaways' and 'roles' are your database collections
+        giveaway = giveaways.find_one({'giveaway_id': giveaway_id})
+
+        if giveaway is None:
+            bot.send_message(message.from_user.id, "抱歉，此赠品活动已不再有效。")
+            return
+
+        user_id = message.from_user.id
+        chat_id = giveaway['chat_id']
+        role = giveaway["role"]
+
+        if role is not None:
+            role_user = roles.find_one({'chat_id': chat_id, 'user_id': user_id, 'roles': role})
+            if role_user is None:
+                bot.send_message(user_id, f"要参加此抽奖，您必须拥有 {role} 角色。")
+                return
+
+        if user_id in giveaway["participants"]:
+            bot.send_message(user_id, "您已经参加过了此赠品活动。")
+            return
+
+        giveaway["participants"].append(user_id)
+        giveaways.update_one({"giveaway_id": giveaway_id}, {"$set": {"participants": giveaway["participants"], 'is_edit': True}})
+        bot.send_message(user_id, "您已成功参加了赠品活动。")
+
+
+@bot.message_handler(commands=['settings'])
+def create_role(message):
+    is_markup = False
+    admins_list = owners.find({'admins': message.from_user.id})
+
+    # Select a Chat in which you want to create a role
+    msg_txt = """👉🏻 选择要获取其邀请数据的群组。
+
+如果您作为管理员的组未显示在此处：
+ • 在组中发送/启动，然后重试
+ • 机器人不是该组中的管理员"""
+
+    markup = types.InlineKeyboardMarkup()
+    if admins_list:
+        for admin in admins_list:
+            chat_id = admin['chat_id']
+
+            if 'chat_title' in admin:
+                title = admin['chat_title']
+            else:
+                try:
+                    chat_info = bot.get_chat(chat_id)
+                    title = chat_info.title
+                except Exception:
+                    continue
+            markup.add(types.InlineKeyboardButton(f"{title}", callback_data=f"settings:{chat_id}"))
+            is_markup = True
+
+    if is_markup:
+        bot.send_message(message.chat.id, msg_txt, reply_markup=markup)
+    else:
+        bot.send_message(message.chat.id, msg_txt)
+
+
+
 @bot.message_handler(commands=['giveaway'])
 def giveaway_handler(message):
     chat_id = message.chat.id
@@ -1627,7 +1724,7 @@ def giveaway_handler(message):
         except (ValueError, KeyError, IndexError):
             bot.reply_to(message, "命令格式无效。用法：/giveaway <奖励金额> <货币> <获奖人数> <持续时间> <*邀请人数> <*描述>")
             return
-    
+
     if len(args) == 4:
         role = args[3]
         data = roles.find_one({'chat_id':message.chat.id,'role_name':role})
@@ -1666,7 +1763,7 @@ def giveaway_handler(message):
         message_text += f"\n\n要参加此幸运抽奖，您需要拥有 {role} 角色"
 
     url = f"https://t.me/Academy_lottery_assistant_bot?start={giveaway_id}"
-    
+
     text = f"参加抽奖"
     leave_call = f"leave_giveaway:{giveaway_id}"
     refresh_text = f"刷新时间 ({time_left_str})"
@@ -1711,7 +1808,7 @@ def handle_inline_query(query):
     except Exception as e:
         print(f"Error processing inline query: {e}")
         pass
-    
+
 
 
 @bot.message_handler(func=lambda message: True)
@@ -1724,6 +1821,7 @@ def count_messages(message):
                             upsert=True)
     except Exception:
         print("Error processing message count. ")
+
 
 async def main():
     try:
