@@ -78,15 +78,18 @@ def add_inline_invite(chat_id,txt,y):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.data.startswith(("settings:")):
-        chat_id = int(call.data.split(":")[1])
-        chat = bot.get_chat(chat_id)
-        #Please provide me the name of role 
-        msg_text = f"""<b>设置
-组： <code>{chat.title}</code></b>
-
-<i>选择要更改的设置之一。</i>"""
-        markup = add_inline_markup(chat_id)
-        bot.edit_message_text(msg_text,chat_id=call.from_user.id,message_id=call.message.id,parse_mode='HTML',reply_markup=markup)
+        try:
+            chat_id = int(call.data.split(":")[1])
+            chat = bot.get_chat(chat_id)
+            #Please provide me the name of role 
+            msg_text = f"""<b>设置
+    组： <code>{chat.title}</code></b>
+    
+    <i>选择要更改的设置之一。</i>"""
+            markup = add_inline_markup(chat_id)
+            bot.edit_message_text(msg_text,chat_id=call.from_user.id,message_id=call.message.id,parse_mode='HTML',reply_markup=markup)
+        except Exception :
+            bot.answer_callback_query(call.id,f"This chat does not exist anymore !!",show_alert=True,cache_time=3)
     elif call.data.startswith(("roles:")):
         chat_id = int(call.data.split(":")[1])
         markup = InlineKeyboardMarkup(row_width=2)
