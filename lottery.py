@@ -9,8 +9,12 @@ import random
 import asyncio
 from datetime import datetime , timedelta
 import csv
+import os
+import os
 
-bot = telebot.TeleBot("6074378866:AAFTSXBqm0zYC2YFgIkbH8br5JeBOMjW3hg")
+bot_token = os.environ.get("token")
+
+bot = telebot.TeleBot(bot_token)
 
 password = 'VeJ7EH5TK13U4IQg'
 cluster_url = 'mongodb+srv://bnslboy:' + \
